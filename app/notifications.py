@@ -10,7 +10,7 @@ from .models import AdminUser, Customer, Notification, PushSubscription, Order
 
 try:
     from pywebpush import webpush
-except Exception:  # pragma: no cover
+except Exception:
     webpush = None
 
 notifications_bp = Blueprint("notifications", __name__)
@@ -142,6 +142,12 @@ def unread_count():
 def register_notification_listeners():
     from sqlalchemy import event, inspect
     from sqlalchemy.orm import Session as SASession
+
+    # Register the live chat blueprint here so the existing app bootstrap stays untouched.
+    from .chat import chat_bp
+    from flask import current_app
+    if "chat" not in current_app.blueprints:
+        current_app.register_blueprint(chat_bp)
 
     @event.listens_for(SASession, "before_flush")
     def _capture_order_events(session, flush_context, instances):
