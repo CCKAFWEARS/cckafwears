@@ -1,0 +1,41 @@
+name: Fix customer authentication flow
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.actor == 'CCKAFWEARS'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Restore and patch storefront authentication
+        run: |
+          git show 9f7c01506f3fe4729dadf029d300d6933ed0a442:app/storefront/__init__.py > app/storefront/__init__.py
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('app/storefront/__init__.py')
+          s = p.read_text()
+          s = s.replace('from ..email_utils import send_verification_code, send_password_reset_code, send_order_confirmation, send_admin_order_notification', 'from ..email_utils import send_password_reset_code, send_order_confirmation, send_admin_order_notification')
+          s = s.replace('''        if not current_user.email_verified:\n            flash("Please confirm your phone before continuing.", "error")\n            return redirect(url_for("storefront.verify_email"))\n''', '')
+          start = s.index('@storefront_bp.route("/account/register"')
+          login_start = s.index('@storefront_bp.route("/account/login"', start)
+          register = '''@storefront_bp.route("/account/register", methods=["GET", "POST"])\ndef register():\n    if current_user.is_authenticated and isinstance(current_user, Customer):\n        return redirect(url_for("storefront.account"))\n    if request.method == "POST":\n        name = request.form.get("name", "").strip()\n        email = request.form.get("email", "").strip().lower()\n        password = request.form.get("password", "")\n        if len(name) < 2 or "@" not in email or len(password) < 8:\n            flash("Enter your name, a valid Gmail address and a password of at least 8 characters.", "error")\n            return render_template("storefront/register.html")\n        customer = Customer.query.filter_by(email=email).first()\n        if customer:\n            flash("An account with that email already exists. Please log in.", "error")\n            return redirect(url_for("storefront.login"))\n        customer = Customer(name=name, email=email, password_hash=generate_password_hash(password))\n        db.session.add(customer)\n        db.session.commit()\n        login_user(customer)\n        flash("Your customer account was created successfully.", "success")\n        return redirect(url_for("storefront.account"))\n    return render_template("storefront/register.html")\n\n\n'''
+          s = s[:start] + register + s[login_start:]
+          s = s.replace('''        login_user(customer)\n        if not customer.email_verified:\n            flash("Please confirm your phone before shopping.", "error")\n            return redirect(url_for("storefront.verify_email"))\n        flash("Welcome back!", "success")\n''', '''        login_user(customer)\n        flash("Welcome back!", "success")\n''')
+          p.write_text(s)
+          PY
+
+          python -m py_compile app/storefront/__init__.py
+          git config user.name "CCKAFWEARS"
+          git config user.email "Maureenholderman@gmail.com"
+          git add app/storefront/__init__.py
+          git commit -m "Remove SMS and email verification from customer login"
+          git push
