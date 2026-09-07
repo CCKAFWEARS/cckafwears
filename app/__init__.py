@@ -19,6 +19,14 @@ def create_app():
         if database_url.startswith("postgres://"):
             database_url = database_url.replace("postgres://", "postgresql://", 1)
         app.config["SQLALCHEMY_DATABASE_URI"] = database_url
+        # Neon (and most serverless Postgres) suspends the database when idle and
+        # drops the connection. pool_pre_ping tests each connection before use and
+        # transparently reconnects if it's gone stale, instead of crashing with
+        # "SSL connection has been closed unexpectedly".
+        app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+            "pool_pre_ping": True,
+            "pool_recycle": 280,
+        }
     else:
         app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///" + os.path.join(
             app.instance_path, "cckafwears.db"
