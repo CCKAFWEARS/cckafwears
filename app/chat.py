@@ -66,12 +66,13 @@ def visitor_message():
     conversation.updated_at = datetime.utcnow()
     db.session.commit()
     if conversation.status == "active":
-        return jsonify({"ok": True, "status": conversation.status})
+        notify_admins("New live chat message", f"{conversation.customer_name}: {body}", url_for("chat.admin_chat", conversation_id=conversation.id))
+        return jsonify({"ok": True, "status": conversation.status, "conversation_id": conversation.id})
     reply = _bot_reply(body)
     db.session.add(ChatMessage(conversation_id=conversation.id, sender_type="bot", sender_name="CCKAFWEARS Assistant", body=reply))
     conversation.updated_at = datetime.utcnow()
     db.session.commit()
-    return jsonify({"ok": True, "status": conversation.status, "reply": reply})
+    return jsonify({"ok": True, "status": conversation.status, "conversation_id": conversation.id, "reply": reply})
 
 
 def _bot_reply(body):
@@ -145,7 +146,7 @@ def admin_chat_reply(conversation_id):
     db.session.add(ChatMessage(conversation_id=conversation.id, sender_type="admin", sender_name=current_user.username, body=body))
     db.session.commit()
     if conversation.customer_id:
-        notify_customer(conversation.customer_id, "CCKAFWEARS live chat", f"{current_user.username}: {body}", url_for("chat.admin_chat"))
+        notify_customer(conversation.customer_id, "CCKAFWEARS live chat", f"{current_user.username}: {body}", "/")
     return jsonify({"ok": True, "status": conversation.status})
 
 
