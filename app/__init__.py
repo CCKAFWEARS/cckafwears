@@ -22,10 +22,13 @@ def _ensure_schema():
             db.session.commit()
             inspector.clear_cache()
 
-    if "products" in inspector.get_table_names():
+    # SQLAlchemy's default table names in this project are singular: product and category.
+    # The previous deployment migration incorrectly used "products", so existing Neon
+    # databases never received the new image columns before Product was queried.
+    if "product" in inspector.get_table_names():
         blob_type = "BYTEA" if dialect == "postgresql" else "BLOB"
-        add_column_if_missing("products", "image_data", blob_type)
-        add_column_if_missing("products", "image_mime_type", "VARCHAR(80)")
+        add_column_if_missing("product", "image_data", blob_type)
+        add_column_if_missing("product", "image_mime_type", "VARCHAR(80)")
 
     if "category" in inspector.get_table_names():
         blob_type = "BYTEA" if dialect == "postgresql" else "BLOB"
