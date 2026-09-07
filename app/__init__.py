@@ -22,9 +22,6 @@ def _ensure_schema():
             db.session.commit()
             inspector.clear_cache()
 
-    # SQLAlchemy's default table names in this project are singular: product and category.
-    # The previous deployment migration incorrectly used "products", so existing Neon
-    # databases never received the new image columns before Product was queried.
     if "product" in inspector.get_table_names():
         blob_type = "BYTEA" if dialect == "postgresql" else "BLOB"
         add_column_if_missing("product", "image_data", blob_type)
@@ -39,7 +36,7 @@ def _ensure_schema():
 def create_app():
     app = Flask(__name__, instance_relative_config=True)
     app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "change-this-secret-key-before-going-live")
-    app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024
+    app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024
     os.makedirs(app.instance_path, exist_ok=True)
 
     database_url = os.environ.get("DATABASE_URL")
