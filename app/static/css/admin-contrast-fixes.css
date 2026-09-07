@@ -1,0 +1,17 @@
+/* Admin contrast safety net — loaded after admin.css */
+
+.sidebar nav a,
+.sidebar .logout-link{color:#f0f0f0;}
+.sidebar nav a:hover,
+.sidebar nav a.active{color:#fff;background:#1b1b1b;}
+.sidebar .brand{color:#fff;}
+.sidebar .brand small{color:#c7c7c7;}
+
+.sidebar a:focus-visible,
+.sidebar button:focus-visible{outline:2px solid var(--accent);outline-offset:2px;color:#fff;}
+
+/* Prevent generic black text from becoming invisible if a dark panel is used. */
+.sidebar .btn,
+.sidebar .btn-outline{color:#fff;}
+.sidebar .btn-outline{border-color:#fff;background:transparent;}
+.sidebar .btn-outline:hover{background:var(--accent);border-color:var(--accent);color:#fff;}
