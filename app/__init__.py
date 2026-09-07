@@ -18,7 +18,8 @@ def _ensure_schema():
 
     def add_column_if_missing(table, column, sql_type):
         if column not in {c["name"] for c in inspector.get_columns(table)}:
-            db.session.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {sql_type}"))
+            quoted_table = f'"{table}"' if table == "order" else table
+            db.session.execute(text(f"ALTER TABLE {quoted_table} ADD COLUMN {column} {sql_type}"))
             db.session.commit()
             inspector.clear_cache()
 
@@ -99,7 +100,7 @@ def create_app():
             shop_settings=settings,
             cart_count=cart_count,
             wishlist_count=wishlist_count,
-        nav_categories=categories,
+            nav_categories=categories,
         )
 
     with app.app_context():
