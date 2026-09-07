@@ -32,7 +32,7 @@ def _customer_required(view):
             flash("Please create an account or log in before checkout.", "error")
             return redirect(url_for("storefront.login", next=request.path))
         if not current_user.email_verified:
-            flash("Please verify your email before continuing.", "error")
+            flash("Please confirm your phone before continuing.", "error")
             return redirect(url_for("storefront.verify_email"))
         return view(*args, **kwargs)
     return wrapped
@@ -49,9 +49,10 @@ def register():
     if request.method == "POST":
         name = request.form.get("name", "").strip()
         email = request.form.get("email", "").strip().lower()
+        phone = request.form.get("phone", "").strip()
         password = request.form.get("password", "")
-        if len(name) < 2 or "@" not in email or len(password) < 8:
-            flash("Enter your name, a valid email address and a password of at least 8 characters.", "error")
+        if len(name) < 2 or "@" not in email or len(phone) < 9 or len(password) < 8:
+            flash("Enter your name, a valid email address, a valid phone number and a password of at least 8 characters.", "error")
             return render_template("storefront/register.html")
         customer = Customer.query.filter_by(email=email).first()
         if customer and customer.email_verified:
@@ -70,7 +71,7 @@ def register():
         db.session.commit()
         sent = send_verification_code(customer, code)
         login_user(customer)
-        flash("Your account was created. We sent a 6-digit verification code to your email." if sent else "Your account was created, but email sending is not configured yet. Please contact the store owner.", "success" if sent else "error")
+        flash("Your account was created. We sent a 6-digit confirmation code by SMS." if sent else "Your account was created, but SMS sending is not configured yet. Please contact the store owner.", "success" if sent else "error")
         return redirect(url_for("storefront.verify_email"))
     return render_template("storefront/register.html")
 
@@ -84,10 +85,10 @@ def verify_email():
     if request.method == "POST":
         code = request.form.get("code", "").strip()
         if not current_user.otp_hash or not current_user.otp_expires_at or current_user.otp_expires_at < datetime.utcnow():
-            flash("That verification code has expired. Please request a new one.", "error")
+            flash("That confirmation code has expired. Please request a new one.", "error")
             return render_template("storefront/verify_email.html")
         if current_user.otp_attempts >= 5:
-            flash("Too many incorrect attempts. Please request a new verification code.", "error")
+            flash("Too many incorrect attempts. Please request a new confirmation code.", "error")
             return render_template("storefront/verify_email.html")
         if not check_password_hash(current_user.otp_hash, code):
             current_user.otp_attempts += 1
@@ -99,7 +100,8 @@ def verify_email():
         current_user.otp_expires_at = None
         current_user.otp_attempts = 0
         db.session.commit()
-        flash("Email verified. Your customer account is now active.", "success")
+        session.pop("verification_phone", None)
+        flash("Phone confirmed. Your customer account is now active.", "success")
         return redirect(url_for("storefront.account"))
     return render_template("storefront/verify_email.html")
 
@@ -116,9 +118,9 @@ def resend_verification():
     current_user.otp_attempts = 0
     db.session.commit()
     if send_verification_code(current_user, code):
-        flash("A new verification code has been sent.", "success")
+        flash("A new SMS confirmation code has been sent.", "success")
     else:
-        flash("The verification email could not be sent. Please check the store email configuration.", "error")
+        flash("The confirmation SMS could not be sent. Please check the SMS configuration.", "error")
     return redirect(url_for("storefront.verify_email"))
 
 
@@ -135,7 +137,7 @@ def login():
             return render_template("storefront/login.html")
         login_user(customer)
         if not customer.email_verified:
-            flash("Please verify your email before shopping.", "error")
+            flash("Please confirm your phone before shopping.", "error")
             return redirect(url_for("storefront.verify_email"))
         flash("Welcome back!", "success")
         return redirect(request.form.get("next") or url_for("storefront.account"))
