@@ -7,12 +7,17 @@ from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
 from io import BytesIO
+import base64
 
 from .. import db
 from ..models import AdminUser, Product, ProductImage, Category, Order, OrderItem, Settings, Banner, ORDER_STATUSES
 
 admin_bp = Blueprint("admin", __name__, template_folder="../templates/admin")
 ALLOWED_EXT = {"png", "jpg", "jpeg", "webp"}
+
+# Tiny transparent placeholder used only so text/tag banners can reuse the existing
+# Banner table without requiring an image upload or a database migration.
+_TEXT_BANNER_PIXEL = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=")
 
 
 def _allowed_file(filename):
@@ -238,10 +243,17 @@ def banners():
         link_url = request.form.get("link_url", "").strip()
         sort_order = request.form.get("sort_order", 0, type=int)
         uploaded = _save_image(request.files.get("image"))
-        if not title or not uploaded:
-            flash("Banner title and image are required.", "error")
+        if not title:
+            flash("Banner text/title is required.", "error")
             return redirect(url_for("admin.banners"))
-        db.session.add(Banner(title=title, banner_type=banner_type if banner_type in {"homepage", "category", "promotion"} else "homepage", category_id=category_id if banner_type == "category" else None, link_url=link_url, sort_order=sort_order, image_data=uploaded[0], image_mime_type=uploaded[1], is_active=True))
+        if banner_type == "tag":
+            image_data, image_mime = _TEXT_BANNER_PIXEL, "image/png"
+        elif not uploaded:
+            flash("A picture is required for image banners.", "error")
+            return redirect(url_for("admin.banners"))
+        else:
+            image_data, image_mime = uploaded[0], uploaded[1]
+        db.session.add(Banner(title=title, banner_type=banner_type if banner_type in {"homepage", "category", "promotion", "tag"} else "homepage", category_id=category_id if banner_type == "category" else None, link_url=link_url, sort_order=sort_order, image_data=image_data, image_mime_type=image_mime, is_active=True))
         db.session.commit()
         flash(f'Banner "{title}" added.', "success")
         return redirect(url_for("admin.banners"))
@@ -338,27 +350,7 @@ def settings():
         s.bank_account_number = request.form.get("bank_account_number", s.bank_account_number)
         s.base_delivery_fee = float(request.form.get("base_delivery_fee") or s.base_delivery_fee)
         s.fee_per_km = float(request.form.get("fee_per_km") or s.fee_per_km)
-        if request.form.get("shop_lat"): s.shop_lat = float(request.form["shop_lat"])
-        if request.form.get("shop_lng"): s.shop_lng = float(request.form["shop_lng"])
         db.session.commit()
-        flash("Settings updated.", "success")
+        flash("Settings saved.", "success")
         return redirect(url_for("admin.settings"))
     return render_template("admin/settings.html", settings=s)
-
-
-@admin_bp.route("/change-password", methods=["GET", "POST"])
-@login_required
-def change_password():
-    if request.method == "POST":
-        current_pw = request.form.get("current_password", "")
-        new_pw = request.form.get("new_password", "")
-        if not check_password_hash(current_user.password_hash, current_pw):
-            flash("Current password is incorrect.", "error")
-        elif len(new_pw) < 6:
-            flash("New password must be at least 6 characters.", "error")
-        else:
-            current_user.password_hash = generate_password_hash(new_pw)
-            db.session.commit()
-            flash("Password changed.", "success")
-            return redirect(url_for("admin.dashboard"))
-    return render_template("admin/change_password.html")
