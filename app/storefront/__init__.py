@@ -278,3 +278,67 @@ def cart_remove(product_id):
     session["cart"] = cart
     session.modified = True
     return redirect(url_for("storefront.cart_view"))
+
+
+@storefront_bp.route("/checkout", methods=["GET", "POST"])
+@_customer_required
+def checkout():
+    line_items, subtotal = _cart_line_items()
+    if not line_items:
+        flash("Your bag is empty.", "error")
+        return redirect(url_for("storefront.shop"))
+    settings = Settings.get()
+    if request.method == "POST":
+        phone = request.form.get("customer_phone", "").strip()
+        address = request.form.get("delivery_address", "").strip()
+        payment_method = request.form.get("payment_method", "mobile_money")
+        if not phone or not address:
+            flash("Please fill in your phone number and delivery address.", "error")
+            return render_template("storefront/checkout.html", line_items=line_items, subtotal=subtotal, settings=settings, customer=current_user)
+        delivery = calculate_delivery(address, settings.shop_lat, settings.shop_lng, settings.base_delivery_fee, settings.fee_per_km)
+        order = Order(order_code=_generate_order_code(), customer_id=current_user.id, customer_email=current_user.email, customer_name=current_user.name, customer_phone=phone, delivery_address=address, delivery_lat=delivery["lat"], delivery_lng=delivery["lng"], delivery_distance_km=delivery["distance_km"], delivery_fee=delivery["fee"], payment_method=payment_method, items_subtotal=subtotal, total_amount=round(subtotal + delivery["fee"], 2), status="pending_payment")
+        db.session.add(order)
+        db.session.flush()
+        for line in line_items:
+            product = line["product"]
+            db.session.add(OrderItem(order_id=order.id, product_id=product.id, product_name=product.name, unit_price=product.current_price, quantity=line["quantity"]))
+            product.stock = max(0, product.stock - line["quantity"])
+        db.session.commit()
+        send_order_confirmation(order)
+        send_admin_order_notification(order)
+        session["cart"] = {}
+        session.modified = True
+        flash("Order placed successfully. A confirmation has been sent to your email.", "success")
+        return redirect(url_for("storefront.order_status", order_code=order.order_code))
+    return render_template("storefront/checkout.html", line_items=line_items, subtotal=subtotal, settings=settings, customer=current_user)
+
+
+@storefront_bp.route("/order/<order_code>")
+def order_status(order_code):
+    order = Order.query.filter_by(order_code=order_code).first_or_404()
+    if current_user.is_authenticated and isinstance(current_user, Customer) and order.customer_id not in (None, current_user.id):
+        abort(403)
+    return render_template("storefront/order_status.html", order=order, settings=Settings.get())
+
+
+@storefront_bp.route("/order/<order_code>/report-payment", methods=["POST"])
+def report_payment(order_code):
+    order = Order.query.filter_by(order_code=order_code).first_or_404()
+    if current_user.is_authenticated and isinstance(current_user, Customer) and order.customer_id not in (None, current_user.id):
+        abort(403)
+    if order.status == "pending_payment":
+        order.status = "payment_review"
+        db.session.commit()
+        flash("Thanks! We'll confirm your payment shortly.", "success")
+    return redirect(url_for("storefront.order_status", order_code=order.order_code))
+
+
+@storefront_bp.route("/track", methods=["GET", "POST"])
+def track_order():
+    order = None
+    if request.method == "POST":
+        code = request.form.get("order_code", "").strip().upper()
+        order = Order.query.filter_by(order_code=code).first()
+        if not order:
+            flash("We couldn't find an order with that code.", "error")
+    return render_template("storefront/track.html", order=order)
