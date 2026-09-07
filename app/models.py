@@ -9,6 +9,24 @@ class AdminUser(UserMixin, db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
 
 
+class Customer(UserMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), nullable=False)
+    email = db.Column(db.String(255), unique=True, nullable=False, index=True)
+    password_hash = db.Column(db.String(255), nullable=False)
+    email_verified = db.Column(db.Boolean, default=False, nullable=False)
+    otp_hash = db.Column(db.String(255), nullable=True)
+    otp_expires_at = db.Column(db.DateTime, nullable=True)
+    otp_attempts = db.Column(db.Integer, default=0, nullable=False)
+    reset_token_hash = db.Column(db.String(255), nullable=True)
+    reset_token_expires_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    orders = db.relationship("Order", backref="customer", lazy=True)
+
+    def get_id(self):
+        return f"customer:{self.id}"
+
+
 class Settings(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     shop_name = db.Column(db.String(120), default="CCKAFWEARS")
@@ -117,6 +135,8 @@ ORDER_STATUSES = [
 class Order(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     order_code = db.Column(db.String(20), unique=True, nullable=False)
+    customer_id = db.Column(db.Integer, db.ForeignKey("customer.id"), nullable=True, index=True)
+    customer_email = db.Column(db.String(255), nullable=True)
     customer_name = db.Column(db.String(120), nullable=False)
     customer_phone = db.Column(db.String(30), nullable=False)
     delivery_address = db.Column(db.String(255), nullable=False)
