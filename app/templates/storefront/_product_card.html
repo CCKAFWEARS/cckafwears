@@ -1,0 +1,22 @@
+<a href="{{ url_for('storefront.product_detail', product_id=p.id) }}" class="card">
+  <div class="card-img">
+    {% if p.image_filename %}
+      <img src="{{ url_for('static', filename='uploads/' + p.image_filename) }}" alt="{{ p.name }}">
+    {% else %}
+      <div class="placeholder">CCKAFWEARS</div>
+    {% endif %}
+    {% if p.flash_sale_live %}<span class="badge">Flash sale</span>
+    {% elif p.has_discount %}<span class="badge brass">-{{ p.discount_percent|int }}%</span>{% endif %}
+  </div>
+  <div class="card-body">
+    <p class="card-name">{{ p.name }}</p>
+    <div class="price-row">
+      {% if p.has_discount %}
+        <span class="price discounted">GHS {{ "%.2f"|format(p.current_price) }}</span>
+        <span class="price-strike">GHS {{ "%.2f"|format(p.price) }}</span>
+      {% else %}
+        <span class="price">GHS {{ "%.2f"|format(p.price) }}</span>
+      {% endif %}
+    </div>
+  </div>
+</a>

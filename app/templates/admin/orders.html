@@ -1,0 +1,31 @@
+{% extends "admin/base.html" %}
+{% block content %}
+<div class="topbar"><h1>Orders</h1></div>
+
+<div class="card-panel" style="margin-bottom:16px;">
+  <a href="{{ url_for('admin.orders') }}" class="btn btn-sm {{ 'btn-primary' if not status_filter else 'btn-outline' }}">All</a>
+  {% for value, label in statuses %}
+    <a href="{{ url_for('admin.orders', status=value) }}" class="btn btn-sm {{ 'btn-primary' if status_filter == value else 'btn-outline' }}">{{ label }}</a>
+  {% endfor %}
+</div>
+
+<div class="card-panel">
+  {% if orders %}
+  <table>
+    <tr><th>Code</th><th>Customer</th><th>Total</th><th>Distance</th><th>Status</th><th></th></tr>
+    {% for o in orders %}
+    <tr>
+      <td>{{ o.order_code }}</td>
+      <td>{{ o.customer_name }} &middot; {{ o.customer_phone }}</td>
+      <td>GHS {{ "%.2f"|format(o.total_amount) }}</td>
+      <td>{{ o.delivery_distance_km }} km</td>
+      <td><span class="badge {{ 'ok' if o.status in ['paid','delivered'] else 'danger' if o.status=='cancelled' else 'warn' }}">{{ o.status_label }}</span></td>
+      <td><a href="{{ url_for('admin.order_detail', order_id=o.id) }}" class="btn btn-outline btn-sm">View</a></td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+    <p style="color:var(--bone-dim);">No orders yet.</p>
+  {% endif %}
+</div>
+{% endblock %}

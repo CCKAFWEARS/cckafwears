@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}CCKAFWEARS{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/storefront.css') }}">
+</head>
+<body>
+
+  <div class="announce">Free delivery quote calculated at checkout &middot; Pay on confirmation via Mobile Money or Bank</div>
+
+  <header class="nav">
+    <div class="wrap nav-row">
+      <a href="{{ url_for('storefront.home') }}" class="logo"><span class="k">CCKAF</span>WEARS</a>
+      <nav class="nav-links">
+        <a href="{{ url_for('storefront.shop') }}">All dresses</a>
+        {% for cat in nav_categories %}
+          <a href="{{ url_for('storefront.shop', category=cat.id) }}">{{ cat.name }}</a>
+        {% endfor %}
+        <a href="{{ url_for('storefront.track_order') }}">Track order</a>
+      </nav>
+      <div class="nav-actions">
+        <a href="{{ url_for('storefront.cart_view') }}" class="cart-pill">
+          Bag <span class="count">{{ cart_count }}</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="wrap">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div class="flash-msgs">
+          {% for category, message in messages %}
+            <div class="flash {{ category }}">{{ message }}</div>
+          {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+    </div>
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="footer">
+    <div class="wrap">
+      <div class="logo"><span class="k">CCKAF</span>WEARS</div>
+      <p>Luxury dresses, delivered to your door across Ghana.</p>
+      <p>&copy; {{ 2026 }} CCKAFWEARS. All rights reserved.</p>
+    </div>
+  </footer>
+</body>
+</html>

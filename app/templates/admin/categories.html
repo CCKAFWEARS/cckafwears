@@ -1,0 +1,30 @@
+{% extends "admin/base.html" %}
+{% block content %}
+<div class="topbar"><h1>Categories</h1></div>
+
+<div class="card-panel" style="max-width:480px;">
+  <form method="POST" style="display:flex;gap:10px;">
+    <input type="text" name="name" placeholder="e.g. Evening wear" required style="flex:1;padding:11px 13px;background:var(--ink);border:1px solid var(--line);color:var(--bone);border-radius:4px;">
+    <button type="submit" class="btn btn-primary">Add</button>
+  </form>
+</div>
+
+<div class="card-panel" style="max-width:480px;">
+  {% if categories %}
+    <table>
+      {% for c in categories %}
+      <tr>
+        <td>{{ c.name }}</td>
+        <td style="text-align:right;">
+          <form method="POST" action="{{ url_for('admin.category_delete', category_id=c.id) }}" onsubmit="return confirm('Delete this category?');">
+            <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+  {% else %}
+    <p style="color:var(--bone-dim);">No categories yet.</p>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,20 @@
+{% extends "storefront/base.html" %}
+{% block title %}Shop \u2014 CCKAFWEARS{% endblock %}
+{% block content %}
+<section class="section">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>{{ active_category.name if active_category else "All dresses" }}</h2>
+    </div>
+    {% if products %}
+    <div class="grid">
+      {% for p in products %}
+        {% include "storefront/_product_card.html" %}
+      {% endfor %}
+    </div>
+    {% else %}
+      <div class="empty-state">Nothing here yet &mdash; new pieces are on the way.</div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

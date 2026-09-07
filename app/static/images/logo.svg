@@ -1,0 +1,14 @@
+<svg width="240" height="60" viewBox="0 0 240 60" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="brassGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#c9a866"/>
+      <stop offset="100%" stop-color="#A9863E"/>
+    </linearGradient>
+  </defs>
+  <!-- monogram: interlocking C rings -->
+  <g transform="translate(4,10)">
+    <circle cx="18" cy="20" r="15" fill="none" stroke="url(#brassGrad)" stroke-width="3" stroke-dasharray="70 30" transform="rotate(45 18 20)"/>
+    <circle cx="30" cy="20" r="15" fill="none" stroke="#EDE7DC" stroke-width="3" stroke-dasharray="70 30" transform="rotate(225 30 20)"/>
+  </g>
+  <text x="58" y="38" font-family="Fraunces, Georgia, serif" font-size="26" font-weight="600" fill="#EDE7DC" letter-spacing="1">CCKAF<tspan fill="#c9a866">WEARS</tspan></text>
+</svg>

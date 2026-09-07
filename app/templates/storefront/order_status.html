@@ -1,0 +1,55 @@
+{% extends "storefront/base.html" %}
+{% block title %}Order {{ order.order_code }} \u2014 CCKAFWEARS{% endblock %}
+{% block content %}
+<section class="section">
+  <div class="wrap" style="max-width:640px;">
+    <div class="section-head"><h2>Order {{ order.order_code }}</h2></div>
+
+    <p>Status: <span class="status-pill {{ order.status }}">{{ order.status_label }}</span></p>
+
+    <div class="payment-box">
+      <h3 style="margin-top:0;">Order summary</h3>
+      {% for item in order.items %}
+        <div class="row"><span>{{ item.product_name }} &times; {{ item.quantity }}</span><span>GHS {{ "%.2f"|format(item.line_total) }}</span></div>
+      {% endfor %}
+      <div class="summary-line"><span>Subtotal</span><span>GHS {{ "%.2f"|format(order.items_subtotal) }}</span></div>
+      <div class="summary-line">
+        <span>Delivery ({{ order.delivery_distance_km }} km from our shop)</span>
+        <span>GHS {{ "%.2f"|format(order.delivery_fee) }}</span>
+      </div>
+      <div class="summary-line total"><span>Total to pay</span><span>GHS {{ "%.2f"|format(order.total_amount) }}</span></div>
+    </div>
+
+    {% if order.status == "pending_payment" %}
+      <div class="payment-box">
+        <h3 style="margin-top:0;">How to pay</h3>
+        {% if order.payment_method == "mobile_money" %}
+          <p>Send <strong>GHS {{ "%.2f"|format(order.total_amount) }}</strong> via {{ settings.momo_network }} to:</p>
+          <div class="row"><span>Number</span><span><strong>{{ settings.momo_number }}</strong></span></div>
+          <div class="row"><span>Name on account</span><span>{{ settings.shop_name }}</span></div>
+        {% else %}
+          <p>Transfer <strong>GHS {{ "%.2f"|format(order.total_amount) }}</strong> to:</p>
+          <div class="row"><span>Bank</span><span>{{ settings.bank_name }}</span></div>
+          <div class="row"><span>Account name</span><span>{{ settings.bank_account_name }}</span></div>
+          <div class="row"><span>Account number</span><span>{{ settings.bank_account_number }}</span></div>
+        {% endif %}
+        <p style="color:var(--bone-dim);font-size:0.85rem;margin-top:14px;">Use your order code <strong>{{ order.order_code }}</strong> as the payment reference/note if possible.</p>
+
+        <form method="POST" action="{{ url_for('storefront.report_payment', order_code=order.order_code) }}" style="margin-top:16px;">
+          <button type="submit" class="btn btn-primary btn-block">I've sent the payment</button>
+        </form>
+      </div>
+    {% elif order.status == "payment_review" %}
+      <p style="color:var(--bone-dim);">We've received your notice and are confirming your payment. This page will update once confirmed &mdash; check back soon, or bookmark this link.</p>
+    {% elif order.status in ["paid", "out_for_delivery"] %}
+      <p style="color:var(--brass-light);">Payment confirmed! We're preparing your order for delivery.</p>
+    {% elif order.status == "delivered" %}
+      <p style="color:var(--brass-light);">Delivered. Thank you for shopping with CCKAFWEARS!</p>
+    {% elif order.status == "cancelled" %}
+      <p style="color:#d98f88;">This order was cancelled.</p>
+    {% endif %}
+
+    <p style="margin-top:24px;color:var(--bone-dim);font-size:0.85rem;">Save this link or your order code <strong>{{ order.order_code }}</strong> to check status anytime via <a href="{{ url_for('storefront.track_order') }}" style="color:var(--brass-light);">Track order</a>.</p>
+  </div>
+</section>
+{% endblock %}

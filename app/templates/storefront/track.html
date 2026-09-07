@@ -1,0 +1,21 @@
+{% extends "storefront/base.html" %}
+{% block title %}Track Order \u2014 CCKAFWEARS{% endblock %}
+{% block content %}
+<section class="section">
+  <div class="wrap" style="max-width:480px;">
+    <div class="section-head"><h2>Track your order</h2></div>
+    <form method="POST">
+      <div class="field">
+        <label>Order code</label>
+        <input type="text" name="order_code" placeholder="e.g. CK482913" required>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block">Track</button>
+    </form>
+    {% if order %}
+      <p style="margin-top:24px;">
+        <a href="{{ url_for('storefront.order_status', order_code=order.order_code) }}" class="btn btn-outline btn-block">View order {{ order.order_code }}</a>
+      </p>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

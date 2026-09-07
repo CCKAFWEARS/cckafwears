@@ -1,0 +1,47 @@
+{% extends "storefront/base.html" %}
+{% block title %}CCKAFWEARS \u2014 Luxury Dresses{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <div class="wrap hero-inner">
+    <div class="hero-eyebrow">New season arrivals</div>
+    <h1>Dresses built for the moment you walk in.</h1>
+    <p>Hand-picked luxury pieces, delivered anywhere in Ghana. Pay by Mobile Money or bank transfer, once, at checkout.</p>
+    <a href="{{ url_for('storefront.shop') }}" class="btn btn-primary">Shop the collection</a>
+  </div>
+</section>
+
+{% if flash_sale_products %}
+<section class="section">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>Flash sale</h2>
+      <a href="{{ url_for('storefront.shop') }}">View all &rsaquo;</a>
+    </div>
+    <div class="grid">
+      {% for p in flash_sale_products %}
+        {% include "storefront/_product_card.html" %}
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
+<section class="section">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>New arrivals</h2>
+      <a href="{{ url_for('storefront.shop') }}">View all &rsaquo;</a>
+    </div>
+    {% if new_arrivals %}
+    <div class="grid">
+      {% for p in new_arrivals %}
+        {% include "storefront/_product_card.html" %}
+      {% endfor %}
+    </div>
+    {% else %}
+      <div class="empty-state">No dresses have been added yet. Check back soon.</div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

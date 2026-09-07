@@ -1,0 +1,35 @@
+{% extends "admin/base.html" %}
+{% block content %}
+<div class="topbar"><h1>Order {{ order.order_code }}</h1></div>
+
+<div class="card-panel" style="max-width:640px;">
+  <p><strong>{{ order.customer_name }}</strong> &middot; {{ order.customer_phone }}</p>
+  <p style="color:var(--bone-dim);">{{ order.delivery_address }}</p>
+  <p style="color:var(--bone-dim);">Distance: {{ order.delivery_distance_km }} km &middot; Payment method: {{ order.payment_method.replace('_',' ')|title }}</p>
+
+  <table style="margin-top:16px;">
+    {% for item in order.items %}
+    <tr><td>{{ item.product_name }} &times; {{ item.quantity }}</td><td style="text-align:right;">GHS {{ "%.2f"|format(item.line_total) }}</td></tr>
+    {% endfor %}
+    <tr><td>Subtotal</td><td style="text-align:right;">GHS {{ "%.2f"|format(order.items_subtotal) }}</td></tr>
+    <tr><td>Delivery</td><td style="text-align:right;">GHS {{ "%.2f"|format(order.delivery_fee) }}</td></tr>
+    <tr><td><strong>Total</strong></td><td style="text-align:right;"><strong>GHS {{ "%.2f"|format(order.total_amount) }}</strong></td></tr>
+  </table>
+
+  <div style="margin-top:24px;">
+    <p><strong>Current status:</strong> <span class="badge warn">{{ order.status_label }}</span></p>
+    <form method="POST" action="{{ url_for('admin.order_set_status', order_id=order.id) }}" style="display:flex;gap:10px;margin-top:12px;">
+      <select name="status" style="flex:1;padding:11px 13px;background:var(--ink);border:1px solid var(--line);color:var(--bone);border-radius:4px;">
+        {% for value, label in statuses %}
+          <option value="{{ value }}" {% if order.status == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="btn btn-primary">Update status</button>
+    </form>
+    <p style="color:var(--bone-dim);font-size:0.85rem;margin-top:10px;">
+      Once you've received the {{ order.payment_method.replace('_',' ') }} payment, set status to <strong>Paid</strong>.
+      When the dress has been delivered, set status to <strong>Delivered / Sold</strong>.
+    </p>
+  </div>
+</div>
+{% endblock %}

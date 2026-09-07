@@ -1,0 +1,81 @@
+{% extends "admin/base.html" %}
+{% block content %}
+<div class="topbar"><h1>Settings</h1></div>
+
+<form method="POST">
+  <div class="card-panel" style="max-width:640px;">
+    <h3 style="margin-top:0;">Shop details</h3>
+    <div class="field">
+      <label>Shop name</label>
+      <input type="text" name="shop_name" value="{{ settings.shop_name }}">
+    </div>
+    <div class="field">
+      <label>Shop / pickup address (used to calculate delivery distance)</label>
+      <input type="text" name="shop_address" value="{{ settings.shop_address }}">
+    </div>
+    <div class="form-grid">
+      <div class="field">
+        <label>Shop latitude</label>
+        <input type="number" step="0.0001" name="shop_lat" value="{{ settings.shop_lat }}">
+      </div>
+      <div class="field">
+        <label>Shop longitude</label>
+        <input type="number" step="0.0001" name="shop_lng" value="{{ settings.shop_lng }}">
+      </div>
+    </div>
+  </div>
+
+  <div class="card-panel" style="max-width:640px;">
+    <h3 style="margin-top:0;">Mobile Money</h3>
+    <div class="form-grid">
+      <div class="field">
+        <label>Network</label>
+        <select name="momo_network">
+          {% for network in ["MTN Mobile Money", "Vodafone Cash", "AirtelTigo Money"] %}
+            <option {% if settings.momo_network == network %}selected{% endif %}>{{ network }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label>Mobile Money number</label>
+        <input type="text" name="momo_number" value="{{ settings.momo_number }}">
+      </div>
+    </div>
+  </div>
+
+  <div class="card-panel" style="max-width:640px;">
+    <h3 style="margin-top:0;">Bank transfer</h3>
+    <div class="field">
+      <label>Bank name</label>
+      <input type="text" name="bank_name" value="{{ settings.bank_name }}">
+    </div>
+    <div class="form-grid">
+      <div class="field">
+        <label>Account name</label>
+        <input type="text" name="bank_account_name" value="{{ settings.bank_account_name }}">
+      </div>
+      <div class="field">
+        <label>Account number</label>
+        <input type="text" name="bank_account_number" value="{{ settings.bank_account_number }}">
+      </div>
+    </div>
+  </div>
+
+  <div class="card-panel" style="max-width:640px;">
+    <h3 style="margin-top:0;">Delivery fee formula</h3>
+    <p style="color:var(--bone-dim);font-size:0.85rem;">Fee = base fee + (per-km rate &times; distance from your shop to the customer).</p>
+    <div class="form-grid">
+      <div class="field">
+        <label>Base fee (GHS)</label>
+        <input type="number" step="0.01" name="base_delivery_fee" value="{{ settings.base_delivery_fee }}">
+      </div>
+      <div class="field">
+        <label>Rate per km (GHS)</label>
+        <input type="number" step="0.01" name="fee_per_km" value="{{ settings.fee_per_km }}">
+      </div>
+    </div>
+  </div>
+
+  <button type="submit" class="btn btn-primary">Save settings</button>
+</form>
+{% endblock %}

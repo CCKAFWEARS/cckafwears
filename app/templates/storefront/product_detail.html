@@ -1,0 +1,36 @@
+{% extends "storefront/base.html" %}
+{% block title %}{{ product.name }} \u2014 CCKAFWEARS{% endblock %}
+{% block content %}
+<section class="section">
+  <div class="wrap" style="display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:start;">
+    <div class="card-img" style="aspect-ratio:3/4;">
+      {% if product.image_filename %}
+        <img src="{{ url_for('static', filename='uploads/' + product.image_filename) }}" alt="{{ product.name }}">
+      {% else %}
+        <div class="placeholder">CCKAFWEARS</div>
+      {% endif %}
+    </div>
+    <div>
+      <h1 style="font-size:2rem;margin:0 0 12px;">{{ product.name }}</h1>
+      <div class="price-row" style="font-size:1.3rem;margin-bottom:18px;">
+        {% if product.has_discount %}
+          <span class="price discounted">GHS {{ "%.2f"|format(product.current_price) }}</span>
+          <span class="price-strike">GHS {{ "%.2f"|format(product.price) }}</span>
+        {% else %}
+          <span class="price">GHS {{ "%.2f"|format(product.price) }}</span>
+        {% endif %}
+      </div>
+      {% if product.flash_sale_live %}<span class="badge" style="position:static;display:inline-block;margin-bottom:16px;">Flash sale</span>{% endif %}
+      <p style="color:var(--bone-dim);margin-bottom:26px;">{{ product.description or "A signature CCKAFWEARS piece." }}</p>
+
+      <form method="POST" action="{{ url_for('storefront.cart_add', product_id=product.id) }}">
+        <div class="field" style="max-width:140px;">
+          <label>Quantity</label>
+          <input type="number" name="quantity" value="1" min="1" max="{{ product.stock }}">
+        </div>
+        <button type="submit" class="btn btn-primary">Add to bag</button>
+      </form>
+    </div>
+  </div>
+</section>
+{% endblock %}

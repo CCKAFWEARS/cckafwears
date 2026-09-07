@@ -1,0 +1,62 @@
+{% extends "admin/base.html" %}
+{% block content %}
+<div class="topbar"><h1>Dashboard</h1></div>
+
+<div class="stat-grid">
+  <div class="stat"><div class="num">{{ total_products }}</div><div class="label">Total products</div></div>
+  <div class="stat"><div class="num">{{ pending_orders|length }}</div><div class="label">Orders awaiting payment</div></div>
+  <div class="stat"><div class="num">{{ paid_orders|length }}</div><div class="label">Paid, not yet delivered</div></div>
+  <div class="stat"><div class="num">{{ out_of_stock|length }}</div><div class="label">Out of stock</div></div>
+</div>
+
+<div class="card-panel">
+  <h3 style="margin-top:0;">Orders needing attention</h3>
+  {% if pending_orders %}
+  <table>
+    <tr><th>Code</th><th>Customer</th><th>Total</th><th>Status</th><th></th></tr>
+    {% for o in pending_orders %}
+    <tr>
+      <td>{{ o.order_code }}</td>
+      <td>{{ o.customer_name }} &middot; {{ o.customer_phone }}</td>
+      <td>GHS {{ "%.2f"|format(o.total_amount) }}</td>
+      <td><span class="badge warn">{{ o.status_label }}</span></td>
+      <td><a href="{{ url_for('admin.order_detail', order_id=o.id) }}" class="btn btn-outline btn-sm">Review</a></td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+    <p style="color:var(--bone-dim);">Nothing pending. Nice.</p>
+  {% endif %}
+</div>
+
+{% if low_stock %}
+<div class="card-panel">
+  <h3 style="margin-top:0;">Low stock (3 or fewer left)</h3>
+  <table>
+    <tr><th>Product</th><th>Stock</th><th></th></tr>
+    {% for p in low_stock %}
+    <tr>
+      <td>{{ p.name }}</td>
+      <td><span class="badge warn">{{ p.stock }} left</span></td>
+      <td><a href="{{ url_for('admin.product_edit', product_id=p.id) }}" class="btn btn-outline btn-sm">Restock</a></td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+{% endif %}
+
+{% if out_of_stock %}
+<div class="card-panel">
+  <h3 style="margin-top:0;">Out of stock (hidden from shop)</h3>
+  <table>
+    <tr><th>Product</th><th></th></tr>
+    {% for p in out_of_stock %}
+    <tr>
+      <td>{{ p.name }}</td>
+      <td><a href="{{ url_for('admin.product_edit', product_id=p.id) }}" class="btn btn-outline btn-sm">Restock</a></td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+{% endif %}
+{% endblock %}

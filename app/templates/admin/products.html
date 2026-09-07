@@ -1,0 +1,47 @@
+{% extends "admin/base.html" %}
+{% block content %}
+<div class="topbar">
+  <h1>Products</h1>
+  <a href="{{ url_for('admin.product_new') }}" class="btn btn-primary">+ Add dress</a>
+</div>
+
+<div class="card-panel">
+  {% if products %}
+  <table>
+    <tr><th></th><th>Name</th><th>Price</th><th>Stock</th><th>Discount</th><th>Status</th><th></th></tr>
+    {% for p in products %}
+    <tr>
+      <td>
+        {% if p.image_filename %}
+          <img class="thumb" src="{{ url_for('static', filename='uploads/' + p.image_filename) }}">
+        {% else %}
+          <div class="thumb"></div>
+        {% endif %}
+      </td>
+      <td>{{ p.name }}</td>
+      <td>GHS {{ "%.2f"|format(p.price) }}</td>
+      <td>
+        {% if p.stock == 0 %}<span class="badge danger">Out of stock</span>
+        {% elif p.stock <= 3 %}<span class="badge warn">{{ p.stock }} left</span>
+        {% else %}{{ p.stock }}{% endif %}
+      </td>
+      <td>
+        {% if p.flash_sale_live %}<span class="badge warn">Flash sale</span>
+        {% elif p.has_discount %}<span class="badge ok">-{{ p.discount_percent|int }}%</span>
+        {% else %}&mdash;{% endif %}
+      </td>
+      <td>{% if p.is_visible %}<span class="badge ok">Live</span>{% else %}<span class="badge danger">Hidden</span>{% endif %}</td>
+      <td style="white-space:nowrap;">
+        <a href="{{ url_for('admin.product_edit', product_id=p.id) }}" class="btn btn-outline btn-sm">Edit</a>
+        <form method="POST" action="{{ url_for('admin.product_delete', product_id=p.id) }}" style="display:inline;" onsubmit="return confirm('Delete this product?');">
+          <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+    <p style="color:var(--bone-dim);">No products yet. Click "Add dress" to add your first one &mdash; no coding needed.</p>
+  {% endif %}
+</div>
+{% endblock %}
