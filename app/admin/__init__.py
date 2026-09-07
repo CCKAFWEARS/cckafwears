@@ -8,7 +8,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
 
 from .. import db
-from ..models import AdminUser, Product, Category, Order, Settings, Banner, ORDER_STATUSES
+from ..models import AdminUser, Product, Category, Order, OrderItem, Settings, Banner, ORDER_STATUSES
 
 admin_bp = Blueprint("admin", __name__, template_folder="../templates/admin")
 ALLOWED_EXT = {"png", "jpg", "jpeg", "webp"}
@@ -148,7 +148,15 @@ def product_edit(product_id):
 @admin_bp.route("/products/<int:product_id>/delete", methods=["POST"])
 @login_required
 def product_delete(product_id):
-    db.session.delete(Product.query.get_or_404(product_id))
+    product = Product.query.get_or_404(product_id)
+    linked_order_item = OrderItem.query.filter_by(product_id=product.id).first()
+    if linked_order_item:
+        product.is_active = False
+        db.session.commit()
+        flash(f'"{product.name}" cannot be permanently deleted because it is linked to an existing order. It has been hidden from the shop instead.', "warning")
+        return redirect(url_for("admin.products"))
+
+    db.session.delete(product)
     db.session.commit()
     flash("Product deleted.", "success")
     return redirect(url_for("admin.products"))
