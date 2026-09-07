@@ -2,13 +2,14 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Admin Login \u2014 CCKAFWEARS</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Login — CCKAFWEARS</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
 </head>
 <body>
 <div class="login-wrap">
   <div class="login-box">
-    <h2 style="margin-top:0;"><span style="color:var(--brass-light);">CCKAF</span>WEARS Admin</h2>
+    <h2 style="margin-top:0;">CCKAF<span style="color:var(--accent);">WEARS</span> Admin</h2>
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% for category, message in messages %}
         <div class="flash {{ category }}">{{ message }}</div>
@@ -25,6 +26,7 @@
       </div>
       <button type="submit" class="btn btn-primary" style="width:100%;">Log in</button>
     </form>
+    <p style="text-align:center;margin:18px 0 0;"><a href="{{ url_for('admin.reset_password') }}">Reset admin password</a></p>
   </div>
 </div>
 </body>
