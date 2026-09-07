@@ -18,15 +18,15 @@
 </div>
 <script>
 (() => {
- const items=[...document.querySelectorAll('[data-conversation]')], list=document.getElementById('chatList'), messages=document.getElementById('chatMessages'), name=document.getElementById('chatCustomer'), form=document.getElementById('adminChatForm'), input=document.getElementById('adminChatInput'), send=form.querySelector('button'), close=document.getElementById('chatClose');
+ const items=[...document.querySelectorAll('[data-conversation]')], messages=document.getElementById('chatMessages'), name=document.getElementById('chatCustomer'), form=document.getElementById('adminChatForm'), input=document.getElementById('adminChatInput'), send=form.querySelector('button'), close=document.getElementById('chatClose');
  let id=null,last=0,timer=null;
  function draw(m){const d=document.createElement('div');d.className='chat-admin-bubble '+(m.sender==='admin'?'mine':m.sender==='customer'?'customer':'system');if(m.sender==='admin'){const s=document.createElement('strong');s.textContent=(m.name||'You')+' ';d.appendChild(s)}d.appendChild(document.createTextNode(m.body));messages.appendChild(d);messages.scrollTop=messages.scrollHeight;last=Math.max(last,Number(m.id||0));}
- async function load(reset=false){if(!id)return;const r=await fetch('/admin/chat/'+id+'/data?after='+(reset?0:last));if(!r.ok)return;const d=await r.json();if(reset){messages.innerHTML='';last=0;name.textContent=d.customer_name||'Customer';} (d.messages||[]).forEach(draw); input.disabled=false;send.disabled=false;close.hidden=false;}
+ async function load(reset=false){if(!id)return;const r=await fetch('/admin/chat/'+id+'/data?after='+(reset?0:last));if(!r.ok)return;const d=await r.json();if(reset){messages.innerHTML='';last=0;name.textContent=d.customer_name||'Customer';}(d.messages||[]).forEach(draw);input.disabled=false;send.disabled=false;close.hidden=false;}
  async function select(next){id=next;items.forEach(x=>x.classList.toggle('selected',x.dataset.conversation===String(id)));last=0;await load(true);if(timer)clearInterval(timer);timer=setInterval(load,2000);}
  items.forEach(x=>x.addEventListener('click',()=>select(x.dataset.conversation)));
  form.addEventListener('submit',async e=>{e.preventDefault();const text=input.value.trim();if(!text||!id)return;input.value='';const r=await fetch('/admin/chat/'+id+'/reply',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text})});if(r.ok)await load();});
  close.addEventListener('click',async()=>{if(!id)return;if(!confirm('Close this chat?'))return;await fetch('/admin/chat/'+id+'/close',{method:'POST'});await load();});
- if(items[0])select(items[0].dataset.conversation);
+ const requested=new URLSearchParams(location.search).get('conversation_id');const first=items.find(x=>x.dataset.conversation===requested)||items[0];if(first)select(first.dataset.conversation);
  setInterval(()=>location.reload(),30000);
 })();
 </script>
