@@ -75,8 +75,11 @@ def create_app():
 
     from .storefront import storefront_bp
     from .admin import admin_bp
+    from .notifications import notifications_bp, register_notification_listeners
     app.register_blueprint(storefront_bp)
     app.register_blueprint(admin_bp, url_prefix="/admin")
+    app.register_blueprint(notifications_bp)
+    register_notification_listeners()
 
     from .models import Settings, Category
 
