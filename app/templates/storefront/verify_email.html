@@ -1,0 +1,13 @@
+{% extends "storefront/base.html" %}
+{% block title %}Verify email — CCKAFWEARS{% endblock %}
+{% block content %}
+<section class="section"><div class="wrap" style="max-width:560px">
+  <div class="section-head"><h2>Verify your email</h2></div>
+  <p>We sent a 6-digit code to <strong>{{ current_user.email }}</strong>. Enter it below to activate your account.</p>
+  <form method="POST">
+    <div class="field"><label>Verification code</label><input type="text" name="code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required placeholder="123456"></div>
+    <button class="btn btn-primary btn-block" type="submit">Verify email</button>
+  </form>
+  <form method="POST" action="{{ url_for('storefront.resend_verification') }}" style="margin-top:12px"><button class="btn btn-block" type="submit">Send a new code</button></form>
+</div></section>
+{% endblock %}
