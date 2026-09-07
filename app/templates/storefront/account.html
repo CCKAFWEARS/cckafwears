@@ -2,13 +2,20 @@
 {% block title %}My account — CCKAFWEARS{% endblock %}
 {% block content %}
 <section class="section"><div class="wrap" style="max-width:900px">
-  <div class="section-head"><div><p class="eyebrow">Account</p><h1>Hi, {{ customer.name }} 👋</h1><p class="muted">{{ customer.email }}</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn btn-outline btn-sm" href="{{ url_for('storefront.shop') }}">Shop</a><a class="btn btn-outline btn-sm" href="{{ url_for('storefront.account_settings') }}">⚙ Settings</a><a class="btn btn-sm" href="{{ url_for('storefront.logout') }}">Log out</a></div></div>
+  <div class="section-head"><div><p class="eyebrow">Account</p><h1>Hi, {{ customer.name }} 👋</h1><p class="muted">{{ customer.email }}</p></div><div class="account-actions"><a class="btn btn-outline btn-sm" href="{{ url_for('storefront.shop') }}">Shop</a><a class="btn btn-primary btn-sm" href="{{ url_for('storefront.account_settings') }}">⚙ Settings</a><a class="btn btn-sm" href="{{ url_for('storefront.logout') }}">Log out</a></div></div>
 
-  <div class="grid" style="margin:24px 0">
-    <a class="payment-box" href="#orders"><strong>Your Orders</strong><p class="muted">View your previous orders and status.</p></a>
-    <a class="payment-box" href="{{ url_for('storefront.account_settings') }}"><strong>My Info</strong><p class="muted">Update your name and account preferences.</p></a>
-    <a class="payment-box" href="{{ url_for('storefront.wishlist_view') }}"><strong>Notify Me List</strong><p class="muted">Products you are watching.</p></a>
-    <a class="payment-box" href="{{ url_for('notifications.notification_list') }}"><strong>Notifications</strong><p class="muted">Order alerts and CCKAFWEARS updates.</p></a>
+  <div class="account-quick-grid">
+    <a class="payment-box account-tile" href="#orders"><strong>📦 Your Orders</strong><p class="muted">View your previous orders and status.</p></a>
+    <a class="payment-box account-tile" href="{{ url_for('storefront.account_settings') }}"><strong>👤 My Info</strong><p class="muted">Update your name and account preferences.</p></a>
+    <a class="payment-box account-tile" href="{{ url_for('storefront.wishlist_view') }}"><strong>♡ Notify Me List</strong><p class="muted">Products you are watching.</p></a>
+    <a class="payment-box account-tile" href="{{ url_for('notifications.notification_list') }}"><strong>🔔 Notifications</strong><p class="muted">Order alerts and CCKAFWEARS updates.</p></a>
+    <a class="payment-box account-tile" href="{{ url_for('storefront.account_settings') }}#preferences"><strong>🔔 Push Notification Preferences</strong><p class="muted">Control notifications for this device.</p></a>
+    <button type="button" class="payment-box account-tile account-install" data-install-app><strong>📱 Add CCKAFWEARS to Home Screen</strong><p class="muted">Install CCKAFWEARS on your phone like an app.</p></button>
+  </div>
+
+  <div class="payment-box account-settings-callout">
+    <div><p class="eyebrow">Settings & preferences</p><h2>Manage your account</h2><p class="muted">My Info, Notify Me List, push notifications, installation, delivery information, returns, size help and account options are all available here.</p></div>
+    <a class="btn btn-primary" href="{{ url_for('storefront.account_settings') }}">Open Settings</a>
   </div>
 
   <div id="orders" style="margin-top:30px"><div class="section-head"><h2>Your Orders</h2><a href="{{ url_for('storefront.track_order') }}">Track an order →</a></div>
