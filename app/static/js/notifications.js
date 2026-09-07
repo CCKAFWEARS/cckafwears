@@ -23,6 +23,15 @@
     return Uint8Array.from([...rawData].map(char => char.charCodeAt(0)));
   }
 
+  async function saveSubscription(subscription) {
+    if (!subscription) return;
+    await fetch('/api/push/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(subscription.toJSON())
+    });
+  }
+
   async function enableNotifications() {
     if (!('Notification' in window) || !('PushManager' in window)) {
       setButton('Notifications unavailable', true);
@@ -47,11 +56,7 @@
           applicationServerKey: urlBase64ToUint8Array(config.publicKey)
         });
       }
-      await fetch('/api/push/subscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(subscription.toJSON())
-      });
+      await saveSubscription(subscription);
       setButton('Notifications on');
       updateUnreadCount();
     } catch (error) {
@@ -61,6 +66,14 @@
     } finally {
       if (button) button.disabled = false;
     }
+  }
+
+  async function syncExistingSubscription() {
+    try {
+      const registration = await registerServiceWorker();
+      const subscription = registration && await registration.pushManager.getSubscription();
+      if (subscription) await saveSubscription(subscription);
+    } catch (_) {}
   }
 
   async function updateUnreadCount() {
@@ -75,7 +88,7 @@
   }
 
   if (button) button.addEventListener('click', enableNotifications);
-  if ('serviceWorker' in navigator) registerServiceWorker();
+  if ('serviceWorker' in navigator) syncExistingSubscription();
   updateUnreadCount();
 
   window.addEventListener('beforeinstallprompt', event => {
@@ -84,13 +97,22 @@
     if (installButton) installButton.hidden = false;
   });
 
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  if (installButton && isIOS && !isStandalone) installButton.hidden = false;
+
   if (installButton) {
     installButton.addEventListener('click', async () => {
-      if (!deferredInstallPrompt) return;
-      deferredInstallPrompt.prompt();
-      await deferredInstallPrompt.userChoice;
-      deferredInstallPrompt = null;
-      installButton.hidden = true;
+      if (deferredInstallPrompt) {
+        deferredInstallPrompt.prompt();
+        await deferredInstallPrompt.userChoice;
+        deferredInstallPrompt = null;
+        installButton.hidden = true;
+        return;
+      }
+      if (isIOS) {
+        alert('On iPhone/iPad: tap the Share button in Safari, then choose “Add to Home Screen”.');
+      }
     });
   }
 })();
