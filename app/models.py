@@ -52,6 +52,7 @@ class Product(db.Model):
     flash_sale_ends_at = db.Column(db.DateTime, nullable=True)
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    images = db.relationship("ProductImage", backref="product", lazy=True, cascade="all, delete-orphan", order_by="ProductImage.sort_order")
 
     @property
     def in_stock(self):
@@ -78,6 +79,16 @@ class Product(db.Model):
     @property
     def has_discount(self):
         return self.discount_percent and self.discount_percent > 0
+
+
+class ProductImage(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    product_id = db.Column(db.Integer, db.ForeignKey("product.id", ondelete="CASCADE"), nullable=False)
+    image_data = db.Column(db.LargeBinary, nullable=False)
+    image_mime_type = db.Column(db.String(80), default="image/jpeg")
+    image_filename = db.Column(db.String(255), default="")
+    sort_order = db.Column(db.Integer, default=0, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
 class Banner(db.Model):
