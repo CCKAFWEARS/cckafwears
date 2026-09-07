@@ -8,11 +8,11 @@ from sqlalchemy import inspect, text
 
 db = SQLAlchemy()
 login_manager = LoginManager()
-login_manager.login_view = "admin.login"
+login_manager.login_view = "storefront.login"
 
 
 def _ensure_schema():
-    """Small deployment-safe migration for new permanent image/banner fields."""
+    """Small deployment-safe migration for permanent media and customer-account fields."""
     inspector = inspect(db.engine)
     dialect = db.engine.dialect.name
 
@@ -31,6 +31,10 @@ def _ensure_schema():
         blob_type = "BYTEA" if dialect == "postgresql" else "BLOB"
         add_column_if_missing("category", "image_data", blob_type)
         add_column_if_missing("category", "image_mime_type", "VARCHAR(80)")
+
+    if "order" in inspector.get_table_names():
+        add_column_if_missing("order", "customer_id", "INTEGER")
+        add_column_if_missing("order", "customer_email", "VARCHAR(255)")
 
 
 def create_app():
@@ -63,7 +67,15 @@ def create_app():
 
     @login_manager.user_loader
     def load_user(user_id):
-        return models.AdminUser.query.get(int(user_id))
+        if str(user_id).startswith("customer:"):
+            try:
+                return models.Customer.query.get(int(str(user_id).split(":", 1)[1]))
+            except (ValueError, TypeError):
+                return None
+        try:
+            return models.AdminUser.query.get(int(user_id))
+        except (ValueError, TypeError):
+            return None
 
     from .storefront import storefront_bp
     from .admin import admin_bp
@@ -87,7 +99,7 @@ def create_app():
             shop_settings=settings,
             cart_count=cart_count,
             wishlist_count=wishlist_count,
-            nav_categories=categories,
+        nav_categories=categories,
         )
 
     with app.app_context():
