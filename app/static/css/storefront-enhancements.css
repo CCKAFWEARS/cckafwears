@@ -7,8 +7,9 @@
 main{position:relative;z-index:1}
 body{padding-top:118px}
 
-/* Taller hero: more of the phone screen is used while keeping the image framing stable. */
-.home-hero-banner{height:clamp(420px,68vh,760px)}
-.home-hero-banner>a,.home-hero-banner img{height:100%}
-@media(max-width:760px){.announce{height:24px;min-height:24px;padding:0 7px;font-size:.5rem;letter-spacing:.015em;line-height:24px}.nav{top:24px!important}.cat-strip{margin-top:0}body{padding-top:104px;padding-bottom:76px}.home-hero-banner{height:clamp(440px,80vh,700px)}.home-hero-banner>a,.home-hero-banner img{height:100%}}
-@media(max-width:480px){.home-hero-banner{height:clamp(420px,78vh,640px)}}
+/* Full-screen hero: make the first banner tall enough to fill the phone viewport without cropping/zooming the artwork. */
+.home-hero-banner{height:clamp(520px,78vh,820px);background:#f5f5f5}
+.home-hero-banner>a{display:flex;align-items:center;justify-content:center;width:100%;height:100%;overflow:hidden}
+.home-hero-banner img{width:100%;height:100%;object-fit:contain;object-position:center center}
+@media(max-width:760px){.announce{height:24px;min-height:24px;padding:0 7px;font-size:.5rem;letter-spacing:.015em;line-height:24px}.nav{top:24px!important}.cat-strip{margin-top:0}body{padding-top:104px;padding-bottom:76px}.home-hero-banner{height:clamp(560px,92vh,820px)}.home-hero-banner>a{height:100%}.home-hero-banner img{height:100%;object-fit:contain}}
+@media(max-width:480px){.home-hero-banner{height:clamp(520px,90vh,760px)}}
