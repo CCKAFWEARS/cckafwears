@@ -1,0 +1,45 @@
+{% extends "storefront/base.html" %}
+{% block title %}Settings — CCKAFWEARS{% endblock %}
+{% block content %}
+<section class="section"><div class="wrap" style="max-width:760px">
+  <div class="section-head"><div><p class="eyebrow">Account</p><h1>Settings & preferences</h1></div><a class="btn btn-outline btn-sm" href="{{ url_for('storefront.account') }}">Back to account</a></div>
+
+  <div class="payment-box" style="margin:18px 0">
+    <h3>My Info</h3>
+    <form method="post" style="display:grid;gap:14px;margin-top:15px">
+      <label>Name<input name="name" value="{{ customer.name }}" required minlength="2"></label>
+      <label>Email<input value="{{ customer.email }}" readonly></label>
+      <button class="btn" type="submit">Save changes</button>
+    </form>
+  </div>
+
+  <div class="payment-box" style="margin:18px 0">
+    <h3>Preferences</h3>
+    <div style="display:grid;gap:0;margin-top:8px">
+      <div class="settings-row"><div><strong>Push Notifications</strong><p class="muted">Get order updates and important CCKAFWEARS alerts on this phone.</p></div><button type="button" class="btn btn-sm notification-enable" data-notification-toggle>Enable notifications</button></div>
+      <div class="settings-row"><div><strong>Notify Me List</strong><p class="muted">Keep products you want to watch in your wishlist.</p></div><a class="btn btn-outline btn-sm" href="{{ url_for('storefront.wishlist_view') }}">Open list</a></div>
+      <div class="settings-row"><div><strong>Install CCKAFWEARS</strong><p class="muted">Add the shop to your phone like an app.</p></div><button type="button" class="btn btn-outline btn-sm" data-install-app hidden>Add to home</button></div>
+    </div>
+  </div>
+
+  <div class="payment-box" style="margin:18px 0">
+    <h3>Help & Shopping Information</h3>
+    <div style="display:grid;gap:12px;margin-top:10px">
+      <a href="{{ url_for('storefront.track_order') }}">Delivery Info & Track an Order →</a>
+      <a href="{{ url_for('storefront.shop') }}">Size Guide →</a>
+      <a href="mailto:{{ shop_settings.shop_name|lower|replace(' ', '') }}@gmail.com">Help Center →</a>
+      <a href="{{ url_for('storefront.shop') }}">Returns & Exchanges →</a>
+    </div>
+    <p class="muted" style="margin-top:16px">For returns, delivery questions or sizing help, contact CCKAFWEARS using the business contact details provided by the shop.</p>
+  </div>
+
+  <div class="payment-box" style="margin:18px 0">
+    <h3>Account</h3>
+    <div style="display:grid;gap:12px;margin-top:10px">
+      <a href="{{ url_for('storefront.account') }}">Your Orders →</a>
+      <a href="{{ url_for('storefront.reset_password') }}">Change password →</a>
+      <a href="{{ url_for('storefront.logout') }}">Log out →</a>
+    </div>
+  </div>
+</div></section>
+{% endblock %}
