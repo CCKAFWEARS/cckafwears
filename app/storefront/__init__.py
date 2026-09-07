@@ -94,6 +94,21 @@ def account():
     return render_template("storefront/account.html", customer=current_user, orders=orders)
 
 
+@storefront_bp.route("/account/settings", methods=["GET", "POST"])
+@_customer_required
+def account_settings():
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        if len(name) < 2:
+            flash("Please enter a valid name.", "error")
+        else:
+            current_user.name = name
+            db.session.commit()
+            flash("Your information has been updated.", "success")
+        return redirect(url_for("storefront.account_settings"))
+    return render_template("storefront/account_settings.html", customer=current_user)
+
+
 @storefront_bp.route("/account/forgot-password", methods=["GET", "POST"])
 def forgot_password():
     if request.method == "POST":
@@ -143,15 +158,19 @@ def home():
 @storefront_bp.route("/shop")
 def shop():
     category_id = request.args.get("category", type=int)
+    search_term = request.args.get("q", "").strip()
     query = _visible_products_query()
     if category_id:
         query = query.filter(Product.category_id == category_id)
+    if search_term:
+        like = f"%{search_term}%"
+        query = query.filter(db.or_(Product.name.ilike(like), Product.description.ilike(like)))
     products = query.order_by(Product.created_at.desc()).all()
     active_category = Category.query.get(category_id) if category_id else None
     category_banner = None
-    if active_category:
+    if active_category and not search_term:
         category_banner = Banner.query.filter_by(category_id=active_category.id, banner_type="category", is_active=True).order_by(Banner.sort_order.asc(), Banner.created_at.desc()).first()
-    return render_template("storefront/shop.html", products=products, active_category=active_category, category_banner=category_banner)
+    return render_template("storefront/shop.html", products=products, active_category=active_category, category_banner=category_banner, search_term=search_term)
 
 
 @storefront_bp.route("/product/<int:product_id>")
@@ -258,87 +277,3 @@ def cart_add(product_id):
 @storefront_bp.route("/cart/update/<int:product_id>", methods=["POST"])
 def cart_update(product_id):
     cart = _get_cart()
-    qty = request.form.get("quantity", 0, type=int)
-    key = str(product_id)
-    if qty <= 0:
-        cart.pop(key, None)
-    else:
-        product = Product.query.get(product_id)
-        if product:
-            cart[key] = min(product.stock, qty)
-    session["cart"] = cart
-    session.modified = True
-    return redirect(url_for("storefront.cart_view"))
-
-
-@storefront_bp.route("/cart/remove/<int:product_id>", methods=["POST"])
-def cart_remove(product_id):
-    cart = _get_cart()
-    cart.pop(str(product_id), None)
-    session["cart"] = cart
-    session.modified = True
-    return redirect(url_for("storefront.cart_view"))
-
-
-@storefront_bp.route("/checkout", methods=["GET", "POST"])
-@_customer_required
-def checkout():
-    line_items, subtotal = _cart_line_items()
-    if not line_items:
-        flash("Your bag is empty.", "error")
-        return redirect(url_for("storefront.shop"))
-    settings = Settings.get()
-    if request.method == "POST":
-        phone = request.form.get("customer_phone", "").strip()
-        address = request.form.get("delivery_address", "").strip()
-        payment_method = request.form.get("payment_method", "mobile_money")
-        if not phone or not address:
-            flash("Please fill in your phone number and delivery address.", "error")
-            return render_template("storefront/checkout.html", line_items=line_items, subtotal=subtotal, settings=settings, customer=current_user)
-        delivery = calculate_delivery(address, settings.shop_lat, settings.shop_lng, settings.base_delivery_fee, settings.fee_per_km)
-        order = Order(order_code=_generate_order_code(), customer_id=current_user.id, customer_email=current_user.email, customer_name=current_user.name, customer_phone=phone, delivery_address=address, delivery_lat=delivery["lat"], delivery_lng=delivery["lng"], delivery_distance_km=delivery["distance_km"], delivery_fee=delivery["fee"], payment_method=payment_method, items_subtotal=subtotal, total_amount=round(subtotal + delivery["fee"], 2), status="pending_payment")
-        db.session.add(order)
-        db.session.flush()
-        for line in line_items:
-            product = line["product"]
-            db.session.add(OrderItem(order_id=order.id, product_id=product.id, product_name=product.name, unit_price=product.current_price, quantity=line["quantity"]))
-            product.stock = max(0, product.stock - line["quantity"])
-        db.session.commit()
-        send_order_confirmation(order)
-        send_admin_order_notification(order)
-        session["cart"] = {}
-        session.modified = True
-        flash("Order placed successfully. A confirmation has been sent to your email.", "success")
-        return redirect(url_for("storefront.order_status", order_code=order.order_code))
-    return render_template("storefront/checkout.html", line_items=line_items, subtotal=subtotal, settings=settings, customer=current_user)
-
-
-@storefront_bp.route("/order/<order_code>")
-def order_status(order_code):
-    order = Order.query.filter_by(order_code=order_code).first_or_404()
-    if current_user.is_authenticated and isinstance(current_user, Customer) and order.customer_id not in (None, current_user.id):
-        abort(403)
-    return render_template("storefront/order_status.html", order=order, settings=Settings.get())
-
-
-@storefront_bp.route("/order/<order_code>/report-payment", methods=["POST"])
-def report_payment(order_code):
-    order = Order.query.filter_by(order_code=order_code).first_or_404()
-    if current_user.is_authenticated and isinstance(current_user, Customer) and order.customer_id not in (None, current_user.id):
-        abort(403)
-    if order.status == "pending_payment":
-        order.status = "payment_review"
-        db.session.commit()
-        flash("Thanks! We'll confirm your payment shortly.", "success")
-    return redirect(url_for("storefront.order_status", order_code=order.order_code))
-
-
-@storefront_bp.route("/track", methods=["GET", "POST"])
-def track_order():
-    order = None
-    if request.method == "POST":
-        code = request.form.get("order_code", "").strip().upper()
-        order = Order.query.filter_by(order_code=code).first()
-        if not order:
-            flash("We couldn't find an order with that code.", "error")
-    return render_template("storefront/track.html", order=order)
