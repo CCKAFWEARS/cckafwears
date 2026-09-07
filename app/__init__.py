@@ -8,7 +8,7 @@ from sqlalchemy import inspect, text
 
 db = SQLAlchemy()
 login_manager = LoginManager()
-login_manager.login_view = "storefront.login"
+login_manager.login_view = "admin.login"
 
 
 def _ensure_schema():
