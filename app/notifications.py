@@ -9,9 +9,8 @@ from . import db
 from .models import AdminUser, Customer, Notification, PushSubscription, Order
 
 try:
-    from pywebpush import WebPushException, webpush
+    from pywebpush import webpush
 except Exception:  # pragma: no cover
-    WebPushException = Exception
     webpush = None
 
 notifications_bp = Blueprint("notifications", __name__)
@@ -42,13 +41,7 @@ def _send_push_info(subscription_info, title, message, target_url):
     if not _vapid_ready():
         return
     try:
-        webpush(
-            subscription_info=json.loads(subscription_info),
-            data=json.dumps({"title": title, "body": message, "url": target_url}),
-            vapid_private_key=os.environ["VAPID_PRIVATE_KEY"],
-            vapid_claims={"sub": os.environ["VAPID_SUBJECT"]},
-            ttl=86400,
-        )
+        webpush(subscription_info=json.loads(subscription_info), data=json.dumps({"title": title, "body": message, "url": target_url}), vapid_private_key=os.environ["VAPID_PRIVATE_KEY"], vapid_claims={"sub": os.environ["VAPID_SUBJECT"]}, ttl=86400)
     except Exception:
         pass
 
@@ -61,8 +54,7 @@ def _send_push_to_rows(rows, title, message, target_url):
 def notify_customer(customer_id, title, message, target_url="/"):
     if not customer_id:
         return
-    notification = Notification(customer_id=customer_id, title=title, message=message, url=target_url)
-    db.session.add(notification)
+    db.session.add(Notification(customer_id=customer_id, title=title, message=message, url=target_url))
     db.session.commit()
     _send_push_to_rows(PushSubscription.query.filter_by(customer_id=customer_id).all(), title, message, target_url)
 
@@ -164,8 +156,7 @@ def register_notification_listeners():
                     seen.add(key)
                     events.append(("new", obj))
             else:
-                state = inspect(obj)
-                if state.attrs.status.history.has_changes() and obj.id:
+                if inspect(obj).attrs.status.history.has_changes() and obj.id:
                     key = ("status", obj.id, obj.status)
                     if key not in seen:
                         seen.add(key)
@@ -178,24 +169,21 @@ def register_notification_listeners():
         if not events:
             return
         try:
-            # after_commit cannot safely issue SQL on the just-committed Session,
-            # so use a short independent session for notification records/push data.
             from sqlalchemy.orm import Session
             with Session(db.engine) as delivery_session:
                 push_jobs = []
                 for event_type, original_order in events:
-                    order_id = original_order.id
-                    order = delivery_session.get(Order, order_id)
+                    order = delivery_session.get(Order, original_order.id)
                     if not order:
                         continue
                     if event_type == "new":
                         title = "New CCKAFWEARS order"
                         message = f"{order.customer_name} placed order {order.order_code} for GH¢{order.total_amount:.2f}."
                         target = url_for("admin.order_detail", order_id=order.id)
-                        admin_ids = [a.id for a in delivery_session.query(AdminUser.id).all()]
-                        for admin_id_tuple in admin_ids:
-                            delivery_session.add(Notification(admin_user_id=admin_id_tuple[0], title=title, message=message, url=target))
-                        rows = delivery_session.query(PushSubscription).filter(PushSubscription.admin_user_id.in_([x[0] for x in admin_ids])).all() if admin_ids else []
+                        admin_ids = [row[0] for row in delivery_session.query(AdminUser.id).all()]
+                        for admin_id in admin_ids:
+                            delivery_session.add(Notification(admin_user_id=admin_id, title=title, message=message, url=target))
+                        rows = delivery_session.query(PushSubscription).filter(PushSubscription.admin_user_id.in_(admin_ids)).all() if admin_ids else []
                         push_jobs.extend((r.subscription_json, title, message, target) for r in rows)
                     elif event_type == "status" and order.customer_id:
                         title = f"Order {order.order_code} updated"
@@ -208,5 +196,4 @@ def register_notification_listeners():
             for subscription_json, title, message, target in push_jobs:
                 _send_push_info(subscription_json, title, message, target)
         except Exception:
-            # Notifications must never break a successful order/payment update.
             pass
