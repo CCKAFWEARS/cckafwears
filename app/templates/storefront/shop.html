@@ -1,20 +1,6 @@
 {% extends "storefront/base.html" %}
-{% block title %}Shop \u2014 CCKAFWEARS{% endblock %}
+{% block title %}{{ active_category.name if active_category else 'Shop' }} — CCKAFWEARS{% endblock %}
 {% block content %}
-<section class="section">
-  <div class="wrap">
-    <div class="section-head">
-      <h2>{{ active_category.name if active_category else "All dresses" }}</h2>
-    </div>
-    {% if products %}
-    <div class="grid">
-      {% for p in products %}
-        {% include "storefront/_product_card.html" %}
-      {% endfor %}
-    </div>
-    {% else %}
-      <div class="empty-state">Nothing here yet &mdash; new pieces are on the way.</div>
-    {% endif %}
-  </div>
-</section>
+{% if category_banner %}<section class="category-banner">{% if category_banner.link_url %}<a href="{{ category_banner.link_url }}">{% endif %}<img src="{{ url_for('storefront.banner_media', banner_id=category_banner.id) }}" alt="{{ category_banner.title }}">{% if category_banner.link_url %}</a>{% endif %}</section>{% elif active_category and active_category.image_data %}<section class="category-banner category-banner-small"><img src="{{ url_for('storefront.category_media', category_id=active_category.id) }}" alt="{{ active_category.name }}"></section>{% endif %}
+<section class="section shop-section"><div class="wrap"><div class="shop-toolbar"><div><p class="eyebrow">{{ active_category.name if active_category else 'CCKAFWEARS' }}</p><h1>{{ active_category.name if active_category else 'All products' }}</h1><p class="muted">{{ products|length }} item{{ '' if products|length == 1 else 's' }}</p></div><a class="btn btn-outline btn-sm" href="{{ url_for('storefront.shop') }}">Shop all</a></div>{% if products %}<div class="grid">{% for p in products %}{% include "storefront/_product_card.html" %}{% endfor %}</div>{% else %}<div class="empty-state">Nothing here yet — new pieces are on the way.</div>{% endif %}</div></section>
 {% endblock %}
