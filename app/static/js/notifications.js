@@ -1,0 +1,96 @@
+(() => {
+  const button = document.querySelector('[data-notification-toggle]');
+  const count = document.querySelector('[data-notification-count]');
+  const installButton = document.querySelector('[data-install-app]');
+  let deferredInstallPrompt = null;
+
+  function setButton(text, disabled = false) {
+    if (!button) return;
+    button.textContent = text;
+    button.disabled = disabled;
+  }
+
+  async function registerServiceWorker() {
+    if (!('serviceWorker' in navigator)) return null;
+    try { return await navigator.serviceWorker.register('/service-worker.js', { scope: '/' }); }
+    catch (_) { return null; }
+  }
+
+  function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const rawData = atob(base64);
+    return Uint8Array.from([...rawData].map(char => char.charCodeAt(0)));
+  }
+
+  async function enableNotifications() {
+    if (!('Notification' in window) || !('PushManager' in window)) {
+      setButton('Notifications unavailable', true);
+      return;
+    }
+    setButton('Enabling…', true);
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') {
+        setButton(permission === 'denied' ? 'Notifications blocked' : 'Enable notifications');
+        return;
+      }
+      const registration = await registerServiceWorker();
+      if (!registration) throw new Error('Service worker unavailable');
+      const response = await fetch('/api/push/public-key');
+      const config = await response.json();
+      if (!config.publicKey) throw new Error('Push notifications are not configured yet');
+      let subscription = await registration.pushManager.getSubscription();
+      if (!subscription) {
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(config.publicKey)
+        });
+      }
+      await fetch('/api/push/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(subscription.toJSON())
+      });
+      setButton('Notifications on');
+      updateUnreadCount();
+    } catch (error) {
+      console.error(error);
+      setButton('Enable notifications');
+      alert('Notifications are not ready yet. Please try again later.');
+    } finally {
+      if (button) button.disabled = false;
+    }
+  }
+
+  async function updateUnreadCount() {
+    if (!count) return;
+    try {
+      const response = await fetch('/api/notifications/unread-count', { headers: { 'Accept': 'application/json' } });
+      if (!response.ok) return;
+      const data = await response.json();
+      count.textContent = data.count || '';
+      count.hidden = !data.count;
+    } catch (_) {}
+  }
+
+  if (button) button.addEventListener('click', enableNotifications);
+  if ('serviceWorker' in navigator) registerServiceWorker();
+  updateUnreadCount();
+
+  window.addEventListener('beforeinstallprompt', event => {
+    event.preventDefault();
+    deferredInstallPrompt = event;
+    if (installButton) installButton.hidden = false;
+  });
+
+  if (installButton) {
+    installButton.addEventListener('click', async () => {
+      if (!deferredInstallPrompt) return;
+      deferredInstallPrompt.prompt();
+      await deferredInstallPrompt.userChoice;
+      deferredInstallPrompt = null;
+      installButton.hidden = true;
+    });
+  }
+})();
