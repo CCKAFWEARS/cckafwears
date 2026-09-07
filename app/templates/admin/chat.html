@@ -1,0 +1,33 @@
+{% extends "admin/base.html" %}
+{% block title %}Live Chat — CCKAFWEARS{% endblock %}
+{% block content %}
+<div class="chat-admin" data-chat-admin>
+  <div class="chat-admin-head"><div><h1>Live Chat</h1><p>Customers who ask for a person appear here. Reply from this screen and the customer sees it in the same chat.</p></div><span class="chat-live-dot">● Live</span></div>
+  <div class="chat-admin-grid">
+    <aside class="chat-list" id="chatList">
+      {% for conversation in conversations %}
+      <button class="chat-list-item{% if loop.first %} selected{% endif %}" type="button" data-conversation="{{ conversation.id }}" data-status="{{ conversation.status }}"><strong>{{ conversation.customer_name }}</strong><small>{{ conversation.status|replace('_',' ')|title }} · {{ conversation.updated_at.strftime('%d %b %H:%M') if conversation.updated_at else '' }}</small></button>
+      {% else %}<div class="chat-empty">No customer chats yet.</div>{% endfor %}
+    </aside>
+    <section class="chat-window">
+      <div class="chat-window-head"><strong id="chatCustomer">Select a chat</strong><button id="chatClose" type="button" hidden>Close chat</button></div>
+      <div class="chat-admin-messages" id="chatMessages"><div class="chat-empty">Select a conversation to start replying.</div></div>
+      <form id="adminChatForm" class="chat-admin-form"><input id="adminChatInput" maxlength="2000" autocomplete="off" placeholder="Type your reply…" disabled><button type="submit" disabled>Send</button></form>
+    </section>
+  </div>
+</div>
+<script>
+(() => {
+ const items=[...document.querySelectorAll('[data-conversation]')], list=document.getElementById('chatList'), messages=document.getElementById('chatMessages'), name=document.getElementById('chatCustomer'), form=document.getElementById('adminChatForm'), input=document.getElementById('adminChatInput'), send=form.querySelector('button'), close=document.getElementById('chatClose');
+ let id=null,last=0,timer=null;
+ function draw(m){const d=document.createElement('div');d.className='chat-admin-bubble '+(m.sender==='admin'?'mine':m.sender==='customer'?'customer':'system');if(m.sender==='admin'){const s=document.createElement('strong');s.textContent=(m.name||'You')+' ';d.appendChild(s)}d.appendChild(document.createTextNode(m.body));messages.appendChild(d);messages.scrollTop=messages.scrollHeight;last=Math.max(last,Number(m.id||0));}
+ async function load(reset=false){if(!id)return;const r=await fetch('/admin/chat/'+id+'/data?after='+(reset?0:last));if(!r.ok)return;const d=await r.json();if(reset){messages.innerHTML='';last=0;name.textContent=d.customer_name||'Customer';} (d.messages||[]).forEach(draw); input.disabled=false;send.disabled=false;close.hidden=false;}
+ async function select(next){id=next;items.forEach(x=>x.classList.toggle('selected',x.dataset.conversation===String(id)));last=0;await load(true);if(timer)clearInterval(timer);timer=setInterval(load,2000);}
+ items.forEach(x=>x.addEventListener('click',()=>select(x.dataset.conversation)));
+ form.addEventListener('submit',async e=>{e.preventDefault();const text=input.value.trim();if(!text||!id)return;input.value='';const r=await fetch('/admin/chat/'+id+'/reply',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text})});if(r.ok)await load();});
+ close.addEventListener('click',async()=>{if(!id)return;if(!confirm('Close this chat?'))return;await fetch('/admin/chat/'+id+'/close',{method:'POST'});await load();});
+ if(items[0])select(items[0].dataset.conversation);
+ setInterval(()=>location.reload(),30000);
+})();
+</script>
+{% endblock %}
