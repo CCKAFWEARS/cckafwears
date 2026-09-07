@@ -1,7 +1,13 @@
+import base64
 import logging
 import os
 import smtplib
 from email.message import EmailMessage
+from urllib.error import HTTPError, URLError
+from urllib.parse import urlencode
+from urllib.request import Request, urlopen
+
+from flask import request, session
 
 logger = logging.getLogger(__name__)
 
@@ -10,7 +16,6 @@ def _smtp_config():
     host = os.environ.get("SMTP_HOST", "smtp.gmail.com").strip()
     port = int(os.environ.get("SMTP_PORT", "587"))
     username = os.environ.get("SMTP_USERNAME", "").strip()
-    # Gmail App Passwords are sometimes copied with spaces between groups.
     password = "".join(os.environ.get("SMTP_PASSWORD", "").split())
     sender = os.environ.get("MAIL_FROM", username).strip()
     return host, port, username, password, sender
@@ -53,7 +58,7 @@ def send_email(to_addresses, subject, text_body, html_body=None):
         logger.info("Email sent successfully: subject=%r recipients=%s", subject, ",".join(to_addresses))
         return True
     except smtplib.SMTPAuthenticationError:
-        logger.exception("Email not sent: SMTP authentication failed. Check the Gmail App Password and SMTP username.")
+        logger.exception("Email not sent: SMTP authentication failed")
         return False
     except (smtplib.SMTPConnectError, smtplib.SMTPServerDisconnected, TimeoutError, OSError):
         logger.exception("Email not sent: could not connect to SMTP server %s:%s", host, port)
@@ -66,24 +71,65 @@ def send_email(to_addresses, subject, text_body, html_body=None):
         return False
 
 
-def send_verification_code(customer, code):
-    subject = "Verify your CCKAFWEARS account"
-    text = (
-        f"Hi {customer.name},\n\n"
-        f"Your CCKAFWEARS verification code is: {code}\n\n"
-        "This code expires in 10 minutes. If you did not create this account, you can ignore this email.\n\n"
-        "CCKAFWEARS"
+def _sms_config():
+    return (
+        os.environ.get("SMS_ACCOUNT_SID", "").strip(),
+        os.environ.get("SMS_AUTH_TOKEN", "").strip(),
+        os.environ.get("SMS_FROM_NUMBER", "").strip(),
     )
-    html = f"""
-    <div style=\"font-family:Arial,sans-serif;max-width:560px;margin:auto\">
-      <h2>CCKAFWEARS</h2>
-      <p>Hi {customer.name},</p>
-      <p>Use the verification code below to activate your customer account:</p>
-      <div style=\"font-size:32px;font-weight:700;letter-spacing:8px;margin:24px 0\">{code}</div>
-      <p>This code expires in 10 minutes.</p>
-    </div>
-    """
-    return send_email(customer.email, subject, text, html)
+
+
+def _normalize_phone(phone):
+    phone = (phone or "").strip().replace(" ", "").replace("-", "")
+    if phone.startswith("00"):
+        phone = "+" + phone[2:]
+    elif phone.startswith("0"):
+        phone = "+233" + phone[1:]
+    return phone
+
+
+def send_sms(to_number, body):
+    account_sid, auth_token, from_number = _sms_config()
+    if not account_sid or not auth_token or not from_number:
+        logger.error("SMS not sent: SMS_ACCOUNT_SID, SMS_AUTH_TOKEN and SMS_FROM_NUMBER are required")
+        return False
+
+    to_number = _normalize_phone(to_number)
+    if not to_number.startswith("+") or len(to_number) < 10:
+        logger.error("SMS not sent: invalid destination phone number")
+        return False
+
+    url = f"https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Messages.json"
+    payload = urlencode({"From": from_number, "To": to_number, "Body": body}).encode("utf-8")
+    credentials = base64.b64encode(f"{account_sid}:{auth_token}".encode("utf-8")).decode("ascii")
+    req = Request(url, data=payload, method="POST", headers={"Authorization": f"Basic {credentials}"})
+
+    try:
+        with urlopen(req, timeout=20) as response:
+            if 200 <= response.status < 300:
+                return True
+            logger.error("SMS provider returned HTTP %s", response.status)
+            return False
+    except HTTPError as exc:
+        logger.error("SMS provider rejected the message: HTTP %s", exc.code)
+        return False
+    except URLError as exc:
+        logger.error("SMS connection failed: %s", exc.reason)
+        return False
+    except Exception:
+        logger.exception("Unexpected SMS sending error")
+        return False
+
+
+def send_verification_code(customer, code):
+    """Send the customer verification OTP by SMS instead of email."""
+    phone = request.form.get("phone", "").strip() or session.get("verification_phone", "")
+    phone = _normalize_phone(phone)
+    if not phone:
+        logger.error("Verification SMS not sent: no phone number was supplied")
+        return False
+    session["verification_phone"] = phone
+    return send_sms(phone, f"CCKAFWEARS verification code: {code}. It expires in 10 minutes. Do not share this code.")
 
 
 def send_password_reset_code(customer, code):
@@ -91,7 +137,7 @@ def send_password_reset_code(customer, code):
     text = (
         f"Hi {customer.name},\n\n"
         f"Your CCKAFWEARS password reset code is: {code}\n\n"
-        "This code expires in 10 minutes. If you did not request a password reset, ignore this email.\n\n"
+        "This code expires in 10 minutes. If you did not request a password reset, ignore this message.\n\n"
         "CCKAFWEARS"
     )
     return send_email(customer.email, subject, text)
@@ -119,7 +165,9 @@ def send_order_confirmation(order):
 
 
 def send_admin_order_notification(order):
-    recipients = os.environ.get("ORDER_NOTIFICATION_EMAILS", "cliffordanun@gmail.com")
+    recipients = os.environ.get("ORDER_NOTIFICATION_EMAILS", "").strip()
+    if not recipients:
+        return False
     lines = "\n".join(
         f"- {item.product_name} x {item.quantity}: GHS {item.line_total:.2f}"
         for item in order.items
