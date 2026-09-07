@@ -27,17 +27,17 @@
     <div style="display:grid;gap:12px;margin-top:10px">
       <a href="{{ url_for('storefront.track_order') }}">Delivery Info & Track an Order →</a>
       <a href="{{ url_for('storefront.shop') }}">Size Guide →</a>
-      <a href="mailto:{{ shop_settings.shop_name|lower|replace(' ', '') }}@gmail.com">Help Center →</a>
+      <a href="{{ url_for('storefront.shop') }}">Help Center →</a>
       <a href="{{ url_for('storefront.shop') }}">Returns & Exchanges →</a>
     </div>
-    <p class="muted" style="margin-top:16px">For returns, delivery questions or sizing help, contact CCKAFWEARS using the business contact details provided by the shop.</p>
+    <p class="muted" style="margin-top:16px">Delivery, returns and sizing guidance can be expanded with the shop's official policies and contact details.</p>
   </div>
 
   <div class="payment-box" style="margin:18px 0">
     <h3>Account</h3>
     <div style="display:grid;gap:12px;margin-top:10px">
       <a href="{{ url_for('storefront.account') }}">Your Orders →</a>
-      <a href="{{ url_for('storefront.reset_password') }}">Change password →</a>
+      <a href="{{ url_for('storefront.forgot_password') }}">Change password →</a>
       <a href="{{ url_for('storefront.logout') }}">Log out →</a>
     </div>
   </div>
