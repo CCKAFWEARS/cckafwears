@@ -168,3 +168,24 @@ class OrderItem(db.Model):
     @property
     def line_total(self):
         return round(self.unit_price * self.quantity, 2)
+
+
+class PushSubscription(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    endpoint = db.Column(db.Text, unique=True, nullable=False)
+    subscription_json = db.Column(db.Text, nullable=False)
+    customer_id = db.Column(db.Integer, db.ForeignKey("customer.id"), nullable=True, index=True)
+    admin_user_id = db.Column(db.Integer, db.ForeignKey("admin_user.id"), nullable=True, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class Notification(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    url = db.Column(db.String(500), nullable=False, default="/")
+    customer_id = db.Column(db.Integer, db.ForeignKey("customer.id"), nullable=True, index=True)
+    admin_user_id = db.Column(db.Integer, db.ForeignKey("admin_user.id"), nullable=True, index=True)
+    is_read = db.Column(db.Boolean, default=False, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
