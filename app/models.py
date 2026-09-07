@@ -189,3 +189,24 @@ class Notification(db.Model):
     admin_user_id = db.Column(db.Integer, db.ForeignKey("admin_user.id"), nullable=True, index=True)
     is_read = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+
+class ChatConversation(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    visitor_token = db.Column(db.String(80), unique=True, nullable=False, index=True)
+    customer_id = db.Column(db.Integer, db.ForeignKey("customer.id"), nullable=True, index=True)
+    customer_name = db.Column(db.String(120), default="Shop visitor")
+    status = db.Column(db.String(20), default="waiting", nullable=False, index=True)
+    assigned_admin_id = db.Column(db.Integer, db.ForeignKey("admin_user.id"), nullable=True, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, index=True)
+    messages = db.relationship("ChatMessage", backref="conversation", cascade="all, delete-orphan", order_by="ChatMessage.created_at")
+
+
+class ChatMessage(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    conversation_id = db.Column(db.Integer, db.ForeignKey("chat_conversation.id", ondelete="CASCADE"), nullable=False, index=True)
+    sender_type = db.Column(db.String(20), nullable=False)
+    sender_name = db.Column(db.String(120), default="")
+    body = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
