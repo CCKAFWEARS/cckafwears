@@ -12,6 +12,21 @@
 </section>
 
 {% if flash_sale_products %}
+{% set soonest_end = flash_sale_products | selectattr('flash_sale_ends_at') | map(attribute='flash_sale_ends_at') | list %}
+<div class="flash-banner">
+  <div class="wrap flash-banner-inner">
+    <div class="flash-banner-title">Flash Sale <small>Ends soon</small></div>
+    {% if soonest_end %}
+    <div class="flash-timer" id="flashTimer" data-end="{{ (soonest_end | min).isoformat() }}Z">
+      <div class="tblock"><span class="tnum" id="ftH">00</span><span class="tlabel">Hrs</span></div>
+      <span class="tsep">:</span>
+      <div class="tblock"><span class="tnum" id="ftM">00</span><span class="tlabel">Min</span></div>
+      <span class="tsep">:</span>
+      <div class="tblock"><span class="tnum" id="ftS">00</span><span class="tlabel">Sec</span></div>
+    </div>
+    {% endif %}
+  </div>
+</div>
 <section class="section">
   <div class="wrap">
     <div class="section-head">
@@ -44,4 +59,36 @@
     {% endif %}
   </div>
 </section>
+
+{% if soonest_end %}
+<script>
+  (function() {
+    var timerEl = document.getElementById('flashTimer');
+    if (!timerEl) return;
+    var end = new Date(timerEl.getAttribute('data-end')).getTime();
+    var hEl = document.getElementById('ftH');
+    var mEl = document.getElementById('ftM');
+    var sEl = document.getElementById('ftS');
+
+    function pad(n) { return String(n).padStart(2, '0'); }
+
+    function tick() {
+      var diff = end - Date.now();
+      if (isNaN(end) || diff <= 0) {
+        timerEl.style.display = 'none';
+        return;
+      }
+      var totalSeconds = Math.floor(diff / 1000);
+      var h = Math.floor(totalSeconds / 3600);
+      var m = Math.floor((totalSeconds % 3600) / 60);
+      var s = totalSeconds % 60;
+      hEl.textContent = pad(h);
+      mEl.textContent = pad(m);
+      sEl.textContent = pad(s);
+    }
+    tick();
+    setInterval(tick, 1000);
+  })();
+</script>
+{% endif %}
 {% endblock %}
