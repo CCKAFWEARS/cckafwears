@@ -1,0 +1,27 @@
+{% extends 'storefront/base.html' %}
+{% block title %}Notifications — CCKAFWEARS{% endblock %}
+{% block content %}
+<section class="section wrap">
+  <div class="shop-toolbar"><div><p class="eyebrow">CCKAFWEARS</p><h1>Notifications</h1><p class="muted">Updates from the site will appear here.</p></div></div>
+  {% if notifications %}
+    {% for notification in notifications %}
+      <a class="notification-card{% if not notification.is_read %} unread{% endif %}" href="{{ notification.url }}" data-notification-id="{{ notification.id }}">
+        <strong>{{ notification.title }}</strong>
+        <div>{{ notification.message }}</div>
+        <small>{{ notification.created_at.strftime('%d %b %Y, %I:%M %p') }}</small>
+      </a>
+    {% endfor %}
+  {% else %}
+    <div class="notification-card"><strong>No notifications yet.</strong><div>We'll show useful updates here when something changes.</div></div>
+  {% endif %}
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+document.querySelectorAll('[data-notification-id]').forEach(function(card){
+  card.addEventListener('click', function(){
+    fetch('/notifications/' + card.dataset.notificationId + '/read', {method:'POST', headers:{'Content-Type':'application/json'}}).catch(function(){});
+  });
+});
+</script>
+{% endblock %}
