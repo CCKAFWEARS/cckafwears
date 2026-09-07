@@ -1,24 +1,33 @@
+import logging
 import os
 import smtplib
 from email.message import EmailMessage
 
+logger = logging.getLogger(__name__)
+
 
 def _smtp_config():
-    host = os.environ.get("SMTP_HOST", "smtp.gmail.com")
+    host = os.environ.get("SMTP_HOST", "smtp.gmail.com").strip()
     port = int(os.environ.get("SMTP_PORT", "587"))
-    username = os.environ.get("SMTP_USERNAME", "")
-    password = os.environ.get("SMTP_PASSWORD", "")
-    sender = os.environ.get("MAIL_FROM", username)
+    username = os.environ.get("SMTP_USERNAME", "").strip()
+    # Gmail App Passwords are sometimes copied with spaces between groups.
+    password = "".join(os.environ.get("SMTP_PASSWORD", "").split())
+    sender = os.environ.get("MAIL_FROM", username).strip()
     return host, port, username, password, sender
 
 
 def send_email(to_addresses, subject, text_body, html_body=None):
-    """Send an email through SMTP. Returns True on success and False if unconfigured/failing."""
+    """Send an email through SMTP. Returns True on success and logs a safe failure reason."""
     if isinstance(to_addresses, str):
         to_addresses = [x.strip() for x in to_addresses.split(",") if x.strip()]
     to_addresses = list(to_addresses or [])
     host, port, username, password, sender = _smtp_config()
-    if not to_addresses or not username or not password or not sender:
+
+    if not to_addresses:
+        logger.error("Email not sent: no recipient address was supplied")
+        return False
+    if not username or not password or not sender:
+        logger.error("Email not sent: SMTP environment variables are incomplete")
         return False
 
     message = EmailMessage()
@@ -41,8 +50,19 @@ def send_email(to_addresses, subject, text_body, html_body=None):
                 smtp.ehlo()
                 smtp.login(username, password)
                 smtp.send_message(message)
+        logger.info("Email sent successfully: subject=%r recipients=%s", subject, ",".join(to_addresses))
         return True
+    except smtplib.SMTPAuthenticationError:
+        logger.exception("Email not sent: SMTP authentication failed. Check the Gmail App Password and SMTP username.")
+        return False
+    except (smtplib.SMTPConnectError, smtplib.SMTPServerDisconnected, TimeoutError, OSError):
+        logger.exception("Email not sent: could not connect to SMTP server %s:%s", host, port)
+        return False
+    except smtplib.SMTPException:
+        logger.exception("Email not sent: SMTP server rejected the message")
+        return False
     except Exception:
+        logger.exception("Email not sent: unexpected email error")
         return False
 
 
