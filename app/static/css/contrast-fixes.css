@@ -1,0 +1,88 @@
+/* CCKAFWEARS — Contrast fixes
+   Keeps the black fashion aesthetic while preventing black-on-black controls,
+   links, icons, and form elements from disappearing. Loaded last on purpose. */
+
+/* Dark storefront areas */
+.nav,
+.hero,
+.footer,
+.sale-strip,
+.promo-slider,
+.flash-banner{color:#fff;}
+
+.nav a,
+.nav button,
+.nav .icon-link,
+.nav .nav-links a,
+.hero a,
+.hero button,
+.hero .btn,
+.footer a,
+.footer button,
+.sale-strip a,
+.sale-strip button{color:#fff;}
+
+.nav a:hover,
+.nav .icon-link:hover,
+.footer a:hover,
+.sale-strip a:hover{color:var(--accent);}
+
+/* Outline buttons placed on the black hero/nav must stay visible. */
+.hero .btn-outline,
+.nav .btn-outline,
+.footer .btn-outline,
+.sale-strip .btn-outline{
+  color:#fff;
+  border-color:#fff;
+  background:transparent;
+}
+
+.hero .btn-outline:hover,
+.nav .btn-outline:hover,
+.footer .btn-outline:hover,
+.sale-strip .btn-outline:hover{
+  color:#fff;
+  border-color:var(--accent);
+  background:var(--accent);
+}
+
+/* Make muted controls/icons readable against dark surfaces. */
+.nav svg,
+.hero svg,
+.footer svg,
+.sale-strip svg{color:currentColor;fill:currentColor;}
+
+.footer strong,
+.footer h2,
+.footer h3{color:#fff;}
+
+.footer p{color:#d2d2d2;}
+
+/* Admin dark sidebar: no low-contrast text. */
+.sidebar{color:#fff;}
+.sidebar nav a{color:#e2e2e2;}
+.sidebar nav a:hover,
+.sidebar nav a.active{color:#fff;background:#191919;}
+.sidebar nav a:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;color:#fff;}
+
+/* If a dark panel contains a generic link/button, force a readable foreground. */
+[data-theme="dark"] a,
+[data-theme="dark"] button,
+.dark a,
+.dark button,
+.bg-dark a,
+.bg-dark button{color:#fff;}
+
+/* Placeholder text must remain visible in dark fields. */
+.nav input::placeholder,
+.hero input::placeholder,
+.footer input::placeholder,
+.dark input::placeholder{color:#bdbdbd;opacity:1;}
+
+/* Keyboard focus should always be obvious. */
+.nav a:focus-visible,
+.hero a:focus-visible,
+.footer a:focus-visible,
+.sidebar nav a:focus-visible,
+button:focus-visible,
+a:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
