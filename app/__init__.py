@@ -1,28 +1,49 @@
 import os
+
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
+from sqlalchemy import inspect, text
+
 
 db = SQLAlchemy()
 login_manager = LoginManager()
 login_manager.login_view = "admin.login"
 
 
+def _ensure_schema():
+    """Small deployment-safe migration for new permanent image/banner fields."""
+    inspector = inspect(db.engine)
+    dialect = db.engine.dialect.name
+
+    def add_column_if_missing(table, column, sql_type):
+        if column not in {c["name"] for c in inspector.get_columns(table)}:
+            db.session.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {sql_type}"))
+            db.session.commit()
+            inspector.clear_cache()
+
+    if "products" in inspector.get_table_names():
+        blob_type = "BYTEA" if dialect == "postgresql" else "BLOB"
+        add_column_if_missing("products", "image_data", blob_type)
+        add_column_if_missing("products", "image_mime_type", "VARCHAR(80)")
+
+    if "category" in inspector.get_table_names():
+        blob_type = "BYTEA" if dialect == "postgresql" else "BLOB"
+        add_column_if_missing("category", "image_data", blob_type)
+        add_column_if_missing("category", "image_mime_type", "VARCHAR(80)")
+
+
 def create_app():
     app = Flask(__name__, instance_relative_config=True)
     app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "change-this-secret-key-before-going-live")
+    app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024
     os.makedirs(app.instance_path, exist_ok=True)
 
     database_url = os.environ.get("DATABASE_URL")
     if database_url:
-        # Render/other hosts sometimes give postgres:// - SQLAlchemy needs postgresql://
         if database_url.startswith("postgres://"):
             database_url = database_url.replace("postgres://", "postgresql://", 1)
         app.config["SQLALCHEMY_DATABASE_URI"] = database_url
-        # Neon (and most serverless Postgres) suspends the database when idle and
-        # drops the connection. pool_pre_ping tests each connection before use and
-        # transparently reconnects if it's gone stale, instead of crashing with
-        # "SSL connection has been closed unexpectedly".
         app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
             "pool_pre_ping": True,
             "pool_recycle": 280,
@@ -50,7 +71,6 @@ def create_app():
     app.register_blueprint(storefront_bp)
     app.register_blueprint(admin_bp, url_prefix="/admin")
 
-    # Make settings/cart count available to every template
     from .models import Settings, Category
 
     @app.context_processor
@@ -72,9 +92,34 @@ def create_app():
 
     with app.app_context():
         db.create_all()
+        _ensure_schema()
         _seed_defaults()
+        _migrate_local_images()
 
     return app
+
+
+def _migrate_local_images():
+    """Copy any legacy local uploads into Neon when they still exist."""
+    from .models import Product
+    from mimetypes import guess_type
+
+    folder = os.path.join(os.path.dirname(__file__), "static", "uploads")
+    changed = False
+    for product in Product.query.filter(Product.image_filename.isnot(None)).all():
+        if product.image_data or not product.image_filename:
+            continue
+        path = os.path.join(folder, os.path.basename(product.image_filename))
+        if os.path.isfile(path):
+            try:
+                with open(path, "rb") as fh:
+                    product.image_data = fh.read()
+                product.image_mime_type = guess_type(path)[0] or "image/jpeg"
+                changed = True
+            except OSError:
+                pass
+    if changed:
+        db.session.commit()
 
 
 def _seed_defaults():
