@@ -2,7 +2,7 @@ import json
 import os
 from functools import wraps
 
-from flask import Blueprint, jsonify, render_template, request, url_for
+from flask import Blueprint, Response, jsonify, render_template, request, url_for
 from flask_login import current_user
 
 from . import db
@@ -70,7 +70,7 @@ def notify_admins(title, message, target_url="/admin/"):
 
 @notifications_bp.get("/service-worker.js")
 def service_worker():
-    return render_template("service-worker.js", mimetype="application/javascript")
+    return Response(render_template("service-worker.js"), mimetype="application/javascript")
 
 
 @notifications_bp.get("/api/push/public-key")
