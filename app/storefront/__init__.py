@@ -1,13 +1,18 @@
 import random
+import secrets
 import string
-from datetime import datetime
+from datetime import datetime, timedelta
+from functools import wraps
 from io import BytesIO
 
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash, abort, send_file, send_from_directory, current_app
+from flask_login import current_user, login_user, logout_user
+from werkzeug.security import generate_password_hash, check_password_hash
 
 from .. import db
-from ..models import Product, Category, Order, OrderItem, Settings, Banner
+from ..models import Product, Category, Order, OrderItem, Settings, Banner, Customer
 from ..delivery import calculate_delivery
+from ..email_utils import send_verification_code, send_password_reset_code, send_order_confirmation, send_admin_order_notification
 
 storefront_bp = Blueprint("storefront", __name__, template_folder="../templates/storefront")
 
@@ -18,6 +23,173 @@ def _visible_products_query():
 
 def _generate_order_code():
     return "CK" + "".join(random.choices(string.digits, k=6))
+
+
+def _customer_required(view):
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        if not current_user.is_authenticated or not isinstance(current_user, Customer):
+            flash("Please create an account or log in before checkout.", "error")
+            return redirect(url_for("storefront.login", next=request.path))
+        if not current_user.email_verified:
+            flash("Please verify your email before continuing.", "error")
+            return redirect(url_for("storefront.verify_email"))
+        return view(*args, **kwargs)
+    return wrapped
+
+
+def _make_otp():
+    return f"{secrets.randbelow(1000000):06d}"
+
+
+@storefront_bp.route("/account/register", methods=["GET", "POST"])
+def register():
+    if current_user.is_authenticated and isinstance(current_user, Customer):
+        return redirect(url_for("storefront.account"))
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        email = request.form.get("email", "").strip().lower()
+        password = request.form.get("password", "")
+        if len(name) < 2 or "@" not in email or len(password) < 8:
+            flash("Enter your name, a valid email address and a password of at least 8 characters.", "error")
+            return render_template("storefront/register.html")
+        customer = Customer.query.filter_by(email=email).first()
+        if customer and customer.email_verified:
+            flash("An account with that email already exists. Please log in.", "error")
+            return redirect(url_for("storefront.login"))
+        if customer is None:
+            customer = Customer(name=name, email=email, password_hash=generate_password_hash(password))
+            db.session.add(customer)
+        else:
+            customer.name = name
+            customer.password_hash = generate_password_hash(password)
+        code = _make_otp()
+        customer.otp_hash = generate_password_hash(code)
+        customer.otp_expires_at = datetime.utcnow() + timedelta(minutes=10)
+        customer.otp_attempts = 0
+        db.session.commit()
+        sent = send_verification_code(customer, code)
+        login_user(customer)
+        flash("Your account was created. We sent a 6-digit verification code to your email." if sent else "Your account was created, but email sending is not configured yet. Please contact the store owner.", "success" if sent else "error")
+        return redirect(url_for("storefront.verify_email"))
+    return render_template("storefront/register.html")
+
+
+@storefront_bp.route("/account/verify", methods=["GET", "POST"])
+def verify_email():
+    if not current_user.is_authenticated or not isinstance(current_user, Customer):
+        return redirect(url_for("storefront.login"))
+    if current_user.email_verified:
+        return redirect(url_for("storefront.account"))
+    if request.method == "POST":
+        code = request.form.get("code", "").strip()
+        if not current_user.otp_hash or not current_user.otp_expires_at or current_user.otp_expires_at < datetime.utcnow():
+            flash("That verification code has expired. Please request a new one.", "error")
+            return render_template("storefront/verify_email.html")
+        if current_user.otp_attempts >= 5:
+            flash("Too many incorrect attempts. Please request a new verification code.", "error")
+            return render_template("storefront/verify_email.html")
+        if not check_password_hash(current_user.otp_hash, code):
+            current_user.otp_attempts += 1
+            db.session.commit()
+            flash("That code is incorrect.", "error")
+            return render_template("storefront/verify_email.html")
+        current_user.email_verified = True
+        current_user.otp_hash = None
+        current_user.otp_expires_at = None
+        current_user.otp_attempts = 0
+        db.session.commit()
+        flash("Email verified. Your customer account is now active.", "success")
+        return redirect(url_for("storefront.account"))
+    return render_template("storefront/verify_email.html")
+
+
+@storefront_bp.route("/account/resend-verification", methods=["POST"])
+def resend_verification():
+    if not current_user.is_authenticated or not isinstance(current_user, Customer):
+        return redirect(url_for("storefront.login"))
+    if current_user.email_verified:
+        return redirect(url_for("storefront.account"))
+    code = _make_otp()
+    current_user.otp_hash = generate_password_hash(code)
+    current_user.otp_expires_at = datetime.utcnow() + timedelta(minutes=10)
+    current_user.otp_attempts = 0
+    db.session.commit()
+    if send_verification_code(current_user, code):
+        flash("A new verification code has been sent.", "success")
+    else:
+        flash("The verification email could not be sent. Please check the store email configuration.", "error")
+    return redirect(url_for("storefront.verify_email"))
+
+
+@storefront_bp.route("/account/login", methods=["GET", "POST"])
+def login():
+    if current_user.is_authenticated and isinstance(current_user, Customer):
+        return redirect(url_for("storefront.account"))
+    if request.method == "POST":
+        email = request.form.get("email", "").strip().lower()
+        password = request.form.get("password", "")
+        customer = Customer.query.filter_by(email=email).first()
+        if not customer or not check_password_hash(customer.password_hash, password):
+            flash("Email or password is incorrect.", "error")
+            return render_template("storefront/login.html")
+        login_user(customer)
+        if not customer.email_verified:
+            flash("Please verify your email before shopping.", "error")
+            return redirect(url_for("storefront.verify_email"))
+        flash("Welcome back!", "success")
+        return redirect(request.form.get("next") or url_for("storefront.account"))
+    return render_template("storefront/login.html")
+
+
+@storefront_bp.route("/account/logout")
+def logout():
+    logout_user()
+    flash("You have been logged out.", "success")
+    return redirect(url_for("storefront.home"))
+
+
+@storefront_bp.route("/account")
+@_customer_required
+def account():
+    orders = Order.query.filter_by(customer_id=current_user.id).order_by(Order.created_at.desc()).all()
+    return render_template("storefront/account.html", customer=current_user, orders=orders)
+
+
+@storefront_bp.route("/account/forgot-password", methods=["GET", "POST"])
+def forgot_password():
+    if request.method == "POST":
+        email = request.form.get("email", "").strip().lower()
+        customer = Customer.query.filter_by(email=email).first()
+        if customer:
+            code = _make_otp()
+            customer.reset_token_hash = generate_password_hash(code)
+            customer.reset_token_expires_at = datetime.utcnow() + timedelta(minutes=10)
+            db.session.commit()
+            send_password_reset_code(customer, code)
+        flash("If an account exists for that email, a password reset code has been sent.", "success")
+        return redirect(url_for("storefront.reset_password", email=email))
+    return render_template("storefront/forgot_password.html")
+
+
+@storefront_bp.route("/account/reset-password", methods=["GET", "POST"])
+def reset_password():
+    if request.method == "POST":
+        email = request.form.get("email", "").strip().lower()
+        code = request.form.get("code", "").strip()
+        password = request.form.get("password", "")
+        customer = Customer.query.filter_by(email=email).first()
+        valid = customer and customer.reset_token_hash and customer.reset_token_expires_at and customer.reset_token_expires_at >= datetime.utcnow() and check_password_hash(customer.reset_token_hash, code)
+        if not valid or len(password) < 8:
+            flash("The reset code is invalid or expired, or the new password is too short.", "error")
+            return render_template("storefront/reset_password.html", email=email)
+        customer.password_hash = generate_password_hash(password)
+        customer.reset_token_hash = None
+        customer.reset_token_expires_at = None
+        db.session.commit()
+        flash("Your password has been reset. You can now log in.", "success")
+        return redirect(url_for("storefront.login"))
+    return render_template("storefront/reset_password.html", email=request.args.get("email", ""))
 
 
 @storefront_bp.route("/")
@@ -171,6 +343,7 @@ def cart_view():
 
 
 @storefront_bp.route("/checkout", methods=["GET", "POST"])
+@_customer_required
 def checkout():
     line_items, subtotal = _cart_line_items()
     if not line_items:
@@ -178,15 +351,14 @@ def checkout():
         return redirect(url_for("storefront.shop"))
     settings = Settings.get()
     if request.method == "POST":
-        name = request.form.get("customer_name", "").strip()
         phone = request.form.get("customer_phone", "").strip()
         address = request.form.get("delivery_address", "").strip()
         payment_method = request.form.get("payment_method", "mobile_money")
-        if not name or not phone or not address:
-            flash("Please fill in your name, phone number and delivery address.", "error")
-            return render_template("storefront/checkout.html", line_items=line_items, subtotal=subtotal)
+        if not phone or not address:
+            flash("Please fill in your phone number and delivery address.", "error")
+            return render_template("storefront/checkout.html", line_items=line_items, subtotal=subtotal, settings=settings, customer=current_user)
         delivery = calculate_delivery(address, settings.shop_lat, settings.shop_lng, settings.base_delivery_fee, settings.fee_per_km)
-        order = Order(order_code=_generate_order_code(), customer_name=name, customer_phone=phone, delivery_address=address, delivery_lat=delivery["lat"], delivery_lng=delivery["lng"], delivery_distance_km=delivery["distance_km"], delivery_fee=delivery["fee"], payment_method=payment_method, items_subtotal=subtotal, total_amount=round(subtotal + delivery["fee"], 2), status="pending_payment")
+        order = Order(order_code=_generate_order_code(), customer_id=current_user.id, customer_email=current_user.email, customer_name=current_user.name, customer_phone=phone, delivery_address=address, delivery_lat=delivery["lat"], delivery_lng=delivery["lng"], delivery_distance_km=delivery["distance_km"], delivery_fee=delivery["fee"], payment_method=payment_method, items_subtotal=subtotal, total_amount=round(subtotal + delivery["fee"], 2), status="pending_payment")
         db.session.add(order)
         db.session.flush()
         for line in line_items:
@@ -194,21 +366,28 @@ def checkout():
             db.session.add(OrderItem(order_id=order.id, product_id=product.id, product_name=product.name, unit_price=product.current_price, quantity=line["quantity"]))
             product.stock = max(0, product.stock - line["quantity"])
         db.session.commit()
+        send_order_confirmation(order)
+        send_admin_order_notification(order)
         session["cart"] = {}
         session.modified = True
+        flash("Order placed successfully. A confirmation has been sent to your email.", "success")
         return redirect(url_for("storefront.order_status", order_code=order.order_code))
-    return render_template("storefront/checkout.html", line_items=line_items, subtotal=subtotal, settings=settings)
+    return render_template("storefront/checkout.html", line_items=line_items, subtotal=subtotal, settings=settings, customer=current_user)
 
 
 @storefront_bp.route("/order/<order_code>")
 def order_status(order_code):
     order = Order.query.filter_by(order_code=order_code).first_or_404()
+    if current_user.is_authenticated and isinstance(current_user, Customer) and order.customer_id not in (None, current_user.id):
+        abort(403)
     return render_template("storefront/order_status.html", order=order, settings=Settings.get())
 
 
 @storefront_bp.route("/order/<order_code>/report-payment", methods=["POST"])
 def report_payment(order_code):
     order = Order.query.filter_by(order_code=order_code).first_or_404()
+    if current_user.is_authenticated and isinstance(current_user, Customer) and order.customer_id not in (None, current_user.id):
+        abort(403)
     if order.status == "pending_payment":
         order.status = "payment_review"
         db.session.commit()
