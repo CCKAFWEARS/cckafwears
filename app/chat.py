@@ -1,12 +1,12 @@
 import secrets
 from datetime import datetime
 
-from flask import Blueprint, jsonify, request, session, url_for
+from flask import Blueprint, jsonify, request, session, url_for, redirect, render_template
 from flask_login import current_user
 
 from . import db
 from .models import AdminUser, Customer, ChatConversation, ChatMessage
-from .notifications import notify_admins
+from .notifications import notify_admins, notify_customer
 
 chat_bp = Blueprint("chat", __name__)
 
@@ -67,7 +67,11 @@ def visitor_message():
     db.session.commit()
     if conversation.status == "active":
         return jsonify({"ok": True, "status": conversation.status})
-    return jsonify({"ok": True, "status": conversation.status, "reply": _bot_reply(body)})
+    reply = _bot_reply(body)
+    db.session.add(ChatMessage(conversation_id=conversation.id, sender_type="bot", sender_name="CCKAFWEARS Assistant", body=reply))
+    conversation.updated_at = datetime.utcnow()
+    db.session.commit()
+    return jsonify({"ok": True, "status": conversation.status, "reply": reply})
 
 
 def _bot_reply(body):
@@ -98,7 +102,7 @@ def request_human():
     conversation.updated_at = datetime.utcnow()
     db.session.add(ChatMessage(conversation_id=conversation.id, sender_type="system", sender_name="CCKAFWEARS", body="You’ve been placed in the live-chat queue. A team member will reply here as soon as possible."))
     db.session.commit()
-    notify_admins("New live chat request", f"{conversation.customer_name} is waiting for a CCKAFWEARS team member.", url_for("admin.chat", conversation_id=conversation.id))
+    notify_admins("New live chat request", f"{conversation.customer_name} is waiting for a CCKAFWEARS team member.", url_for("chat.admin_chat", conversation_id=conversation.id))
     return jsonify({"ok": True, "status": conversation.status, "conversation_id": conversation.id})
 
 
@@ -111,10 +115,9 @@ def _admin_conversation(conversation_id):
 @chat_bp.get("/admin/chat")
 def admin_chat():
     if not current_user.is_authenticated or not isinstance(current_user, AdminUser):
-        from flask import redirect
         return redirect(url_for("admin.login"))
     conversations = ChatConversation.query.order_by(ChatConversation.updated_at.desc()).limit(100).all()
-    return __import__("flask").render_template("admin/chat.html", conversations=conversations)
+    return render_template("admin/chat.html", conversations=conversations)
 
 
 @chat_bp.get("/admin/chat/<int:conversation_id>/data")
@@ -141,6 +144,8 @@ def admin_chat_reply(conversation_id):
     conversation.updated_at = datetime.utcnow()
     db.session.add(ChatMessage(conversation_id=conversation.id, sender_type="admin", sender_name=current_user.username, body=body))
     db.session.commit()
+    if conversation.customer_id:
+        notify_customer(conversation.customer_id, "CCKAFWEARS live chat", f"{current_user.username}: {body}", url_for("chat.admin_chat"))
     return jsonify({"ok": True, "status": conversation.status})
 
 
