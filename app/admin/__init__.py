@@ -71,11 +71,11 @@ def reset_password():
         else:
             user = AdminUser.query.order_by(AdminUser.id.asc()).first()
             if not user:
-                flash("No admin account exists.", "error")
+                flash("No admin account exists in the database.", "error")
             else:
                 user.password_hash = generate_password_hash(new_password)
                 db.session.commit()
-                flash(f"Admin password reset successfully. Your admin username is: {user.username}", "success")
+                flash("Admin password reset successfully. Use the existing admin username to log in.", "success")
                 return redirect(url_for("admin.login"))
 
     return render_template("admin/reset_password.html")
