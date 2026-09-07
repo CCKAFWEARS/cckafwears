@@ -8,7 +8,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
 
 from .. import db
-from ..models import AdminUser, Product, Category, Order, OrderItem, Settings, Banner, ORDER_STATUSES
+from ..models import AdminUser, Product, ProductImage, Category, Order, OrderItem, Settings, Banner, ORDER_STATUSES
 
 admin_bp = Blueprint("admin", __name__, template_folder="../templates/admin")
 ALLOWED_EXT = {"png", "jpg", "jpeg", "webp"}
@@ -35,6 +35,17 @@ def _save_image(file_storage):
     if mime not in {"image/png", "image/jpeg", "image/webp"}:
         mime = "image/jpeg"
     return data, mime, secure_filename(file_storage.filename)
+
+
+def _save_images(file_storages):
+    images = []
+    for file_storage in file_storages:
+        if not file_storage or file_storage.filename == "":
+            continue
+        uploaded = _save_image(file_storage)
+        if uploaded:
+            images.append(uploaded)
+    return images
 
 
 @admin_bp.route("/login", methods=["GET", "POST"])
@@ -110,12 +121,16 @@ def products():
 def product_new():
     categories = Category.query.order_by(Category.name).all()
     if request.method == "POST":
-        uploaded = _save_image(request.files.get("image"))
+        uploaded_images = _save_images(request.files.getlist("images"))
         flash_ends = request.form.get("flash_sale_ends_at")
-        product = Product(name=request.form.get("name", "").strip(), description=request.form.get("description", "").strip(), price=float(request.form.get("price") or 0), stock=int(request.form.get("stock") or 0), image_filename=uploaded[2] if uploaded else "", image_data=uploaded[0] if uploaded else None, image_mime_type=uploaded[1] if uploaded else "image/jpeg", category_id=int(request.form["category_id"]) if request.form.get("category_id") else None, discount_percent=float(request.form.get("discount_percent") or 0), is_flash_sale=bool(request.form.get("is_flash_sale")), flash_sale_ends_at=datetime.fromisoformat(flash_ends) if flash_ends else None, is_active=True)
+        primary = uploaded_images[0] if uploaded_images else None
+        product = Product(name=request.form.get("name", "").strip(), description=request.form.get("description", "").strip(), price=float(request.form.get("price") or 0), stock=int(request.form.get("stock") or 0), image_filename=primary[2] if primary else "", image_data=primary[0] if primary else None, image_mime_type=primary[1] if primary else "image/jpeg", category_id=int(request.form["category_id"]) if request.form.get("category_id") else None, discount_percent=float(request.form.get("discount_percent") or 0), is_flash_sale=bool(request.form.get("is_flash_sale")), flash_sale_ends_at=datetime.fromisoformat(flash_ends) if flash_ends else None, is_active=True)
         db.session.add(product)
+        db.session.flush()
+        for index, uploaded in enumerate(uploaded_images):
+            db.session.add(ProductImage(product_id=product.id, image_data=uploaded[0], image_mime_type=uploaded[1], image_filename=uploaded[2], sort_order=index))
         db.session.commit()
-        flash(f'"{product.name}" was added to the shop.', "success")
+        flash(f'"{product.name}" was added to the shop with {len(uploaded_images)} photo(s).', "success")
         return redirect(url_for("admin.products"))
     return render_template("admin/product_form.html", product=None, categories=categories)
 
@@ -136,9 +151,13 @@ def product_edit(product_id):
         flash_ends = request.form.get("flash_sale_ends_at")
         product.flash_sale_ends_at = datetime.fromisoformat(flash_ends) if flash_ends else None
         product.is_active = bool(request.form.get("is_active"))
-        uploaded = _save_image(request.files.get("image"))
-        if uploaded:
-            product.image_data, product.image_mime_type, product.image_filename = uploaded
+        uploaded_images = _save_images(request.files.getlist("images"))
+        if uploaded_images:
+            primary = uploaded_images[0]
+            product.image_data, product.image_mime_type, product.image_filename = primary
+            next_sort = max([image.sort_order for image in product.images], default=-1) + 1
+            for index, uploaded in enumerate(uploaded_images):
+                db.session.add(ProductImage(product_id=product.id, image_data=uploaded[0], image_mime_type=uploaded[1], image_filename=uploaded[2], sort_order=next_sort + index))
         db.session.commit()
         flash(f'"{product.name}" was updated.', "success")
         return redirect(url_for("admin.products"))
