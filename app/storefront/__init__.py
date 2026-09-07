@@ -57,6 +57,35 @@ def _get_cart():
     return session.setdefault("cart", {})
 
 
+def _get_wishlist():
+    return session.setdefault("wishlist", [])
+
+
+@storefront_bp.route("/wishlist/toggle/<int:product_id>", methods=["POST"])
+def wishlist_toggle(product_id):
+    product = Product.query.get_or_404(product_id)
+    wishlist = _get_wishlist()
+    if product_id in wishlist:
+        wishlist.remove(product_id)
+        flash(f"Removed {product.name} from your wishlist.", "success")
+    else:
+        wishlist.append(product_id)
+        flash(f"Added {product.name} to your wishlist.", "success")
+    session["wishlist"] = wishlist
+    session.modified = True
+    next_url = request.form.get("next") or url_for("storefront.shop")
+    return redirect(next_url)
+
+
+@storefront_bp.route("/wishlist")
+def wishlist_view():
+    wishlist = _get_wishlist()
+    products = [
+        p for p in Product.query.filter(Product.id.in_(wishlist)).all() if p.is_visible
+    ] if wishlist else []
+    return render_template("storefront/wishlist.html", products=products)
+
+
 @storefront_bp.route("/cart/add/<int:product_id>", methods=["POST"])
 def cart_add(product_id):
     product = Product.query.get_or_404(product_id)

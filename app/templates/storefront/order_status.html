@@ -33,23 +33,23 @@
           <div class="row"><span>Account name</span><span>{{ settings.bank_account_name }}</span></div>
           <div class="row"><span>Account number</span><span>{{ settings.bank_account_number }}</span></div>
         {% endif %}
-        <p style="color:var(--bone-dim);font-size:0.85rem;margin-top:14px;">Use your order code <strong>{{ order.order_code }}</strong> as the payment reference/note if possible.</p>
+        <p style="color:var(--ink-dim);font-size:0.85rem;margin-top:14px;">Use your order code <strong>{{ order.order_code }}</strong> as the payment reference/note if possible.</p>
 
         <form method="POST" action="{{ url_for('storefront.report_payment', order_code=order.order_code) }}" style="margin-top:16px;">
           <button type="submit" class="btn btn-primary btn-block">I've sent the payment</button>
         </form>
       </div>
     {% elif order.status == "payment_review" %}
-      <p style="color:var(--bone-dim);">We've received your notice and are confirming your payment. This page will update once confirmed &mdash; check back soon, or bookmark this link.</p>
+      <p style="color:var(--ink-dim);">We've received your notice and are confirming your payment. This page will update once confirmed &mdash; check back soon, or bookmark this link.</p>
     {% elif order.status in ["paid", "out_for_delivery"] %}
-      <p style="color:var(--brass-light);">Payment confirmed! We're preparing your order for delivery.</p>
+      <p style="color:var(--gold);">Payment confirmed! We're preparing your order for delivery.</p>
     {% elif order.status == "delivered" %}
-      <p style="color:var(--brass-light);">Delivered. Thank you for shopping with CCKAFWEARS!</p>
+      <p style="color:var(--gold);">Delivered. Thank you for shopping with CCKAFWEARS!</p>
     {% elif order.status == "cancelled" %}
       <p style="color:#d98f88;">This order was cancelled.</p>
     {% endif %}
 
-    <p style="margin-top:24px;color:var(--bone-dim);font-size:0.85rem;">Save this link or your order code <strong>{{ order.order_code }}</strong> to check status anytime via <a href="{{ url_for('storefront.track_order') }}" style="color:var(--brass-light);">Track order</a>.</p>
+    <p style="margin-top:24px;color:var(--ink-dim);font-size:0.85rem;">Save this link or your order code <strong>{{ order.order_code }}</strong> to check status anytime via <a href="{{ url_for('storefront.track_order') }}" style="color:var(--gold);">Track order</a>.</p>
   </div>
 </section>
 {% endblock %}

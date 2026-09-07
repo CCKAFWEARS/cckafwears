@@ -11,7 +11,7 @@
 
 <div class="card-panel" style="max-width:480px;">
   {% if categories %}
-    <table>
+    <div class="table-scroll"><table>
       {% for c in categories %}
       <tr>
         <td>{{ c.name }}</td>
@@ -22,7 +22,7 @@
         </td>
       </tr>
       {% endfor %}
-    </table>
+    </table></div>
   {% else %}
     <p style="color:var(--bone-dim);">No categories yet.</p>
   {% endif %}

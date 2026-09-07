@@ -5,7 +5,7 @@
   <div class="wrap">
     <div class="section-head"><h2>Checkout</h2></div>
 
-    <div style="display:grid;grid-template-columns:2fr 1fr;gap:40px;align-items:start;">
+    <div class="split-3-2">
       <form method="POST">
         <div class="field">
           <label>Full name</label>
@@ -26,20 +26,20 @@
             <input type="radio" name="payment_method" value="mobile_money" checked>
             <div>
               <strong>Mobile Money</strong>
-              <p style="color:var(--bone-dim);font-size:0.85rem;margin:4px 0 0;">MTN, Vodafone or AirtelTigo</p>
+              <p style="color:var(--ink-dim);font-size:0.85rem;margin:4px 0 0;">MTN, Vodafone or AirtelTigo</p>
             </div>
           </label>
           <label class="radio-card">
             <input type="radio" name="payment_method" value="bank">
             <div>
               <strong>Bank transfer</strong>
-              <p style="color:var(--bone-dim);font-size:0.85rem;margin:4px 0 0;">Direct transfer to our account</p>
+              <p style="color:var(--ink-dim);font-size:0.85rem;margin:4px 0 0;">Direct transfer to our account</p>
             </div>
           </label>
         </div>
 
         <button type="submit" class="btn btn-primary btn-block">Place order</button>
-        <p style="color:var(--bone-dim);font-size:0.82rem;margin-top:10px;">Your delivery fee will be calculated automatically based on the distance to your address, and shown before you pay.</p>
+        <p style="color:var(--ink-dim);font-size:0.82rem;margin-top:10px;">Your delivery fee will be calculated automatically based on the distance to your address, and shown before you pay.</p>
       </form>
 
       <div class="payment-box">

@@ -1,0 +1,21 @@
+{% extends "storefront/base.html" %}
+{% block title %}Wishlist \u2014 CCKAFWEARS{% endblock %}
+{% block content %}
+<section class="section">
+  <div class="wrap">
+    <div class="section-head"><h2>Your wishlist</h2></div>
+    {% if products %}
+    <div class="grid">
+      {% for p in products %}
+        {% include "storefront/_product_card.html" %}
+      {% endfor %}
+    </div>
+    {% else %}
+      <div class="empty-state">
+        <p>Nothing saved yet. Tap the heart on any dress to add it here.</p>
+        <a href="{{ url_for('storefront.shop') }}" class="btn btn-outline" style="margin-top:16px;">Browse the shop</a>
+      </div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

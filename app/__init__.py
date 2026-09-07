@@ -59,9 +59,16 @@ def create_app():
 
         cart = session.get("cart", {})
         cart_count = sum(cart.values()) if cart else 0
+        wishlist = session.get("wishlist", [])
+        wishlist_count = len(wishlist)
         settings = Settings.get()
         categories = Category.query.order_by(Category.name).all()
-        return dict(shop_settings=settings, cart_count=cart_count, nav_categories=categories)
+        return dict(
+            shop_settings=settings,
+            cart_count=cart_count,
+            wishlist_count=wishlist_count,
+            nav_categories=categories,
+        )
 
     with app.app_context():
         db.create_all()

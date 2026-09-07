@@ -7,7 +7,7 @@
 
 <div class="card-panel">
   {% if products %}
-  <table>
+  <div class="table-scroll"><table>
     <tr><th></th><th>Name</th><th>Price</th><th>Stock</th><th>Discount</th><th>Status</th><th></th></tr>
     {% for p in products %}
     <tr>
@@ -39,7 +39,7 @@
       </td>
     </tr>
     {% endfor %}
-  </table>
+  </table></div>
   {% else %}
     <p style="color:var(--bone-dim);">No products yet. Click "Add dress" to add your first one &mdash; no coding needed.</p>
   {% endif %}

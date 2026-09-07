@@ -11,7 +11,7 @@
 
 <div class="card-panel">
   {% if orders %}
-  <table>
+  <div class="table-scroll"><table>
     <tr><th>Code</th><th>Customer</th><th>Total</th><th>Distance</th><th>Status</th><th></th></tr>
     {% for o in orders %}
     <tr>
@@ -23,7 +23,7 @@
       <td><a href="{{ url_for('admin.order_detail', order_id=o.id) }}" class="btn btn-outline btn-sm">View</a></td>
     </tr>
     {% endfor %}
-  </table>
+  </table></div>
   {% else %}
     <p style="color:var(--bone-dim);">No orders yet.</p>
   {% endif %}

@@ -12,7 +12,7 @@
 <div class="card-panel">
   <h3 style="margin-top:0;">Orders needing attention</h3>
   {% if pending_orders %}
-  <table>
+  <div class="table-scroll"><table>
     <tr><th>Code</th><th>Customer</th><th>Total</th><th>Status</th><th></th></tr>
     {% for o in pending_orders %}
     <tr>
@@ -23,7 +23,7 @@
       <td><a href="{{ url_for('admin.order_detail', order_id=o.id) }}" class="btn btn-outline btn-sm">Review</a></td>
     </tr>
     {% endfor %}
-  </table>
+  </table></div>
   {% else %}
     <p style="color:var(--bone-dim);">Nothing pending. Nice.</p>
   {% endif %}
@@ -32,7 +32,7 @@
 {% if low_stock %}
 <div class="card-panel">
   <h3 style="margin-top:0;">Low stock (3 or fewer left)</h3>
-  <table>
+  <div class="table-scroll"><table>
     <tr><th>Product</th><th>Stock</th><th></th></tr>
     {% for p in low_stock %}
     <tr>
@@ -41,14 +41,14 @@
       <td><a href="{{ url_for('admin.product_edit', product_id=p.id) }}" class="btn btn-outline btn-sm">Restock</a></td>
     </tr>
     {% endfor %}
-  </table>
+  </table></div>
 </div>
 {% endif %}
 
 {% if out_of_stock %}
 <div class="card-panel">
   <h3 style="margin-top:0;">Out of stock (hidden from shop)</h3>
-  <table>
+  <div class="table-scroll"><table>
     <tr><th>Product</th><th></th></tr>
     {% for p in out_of_stock %}
     <tr>
@@ -56,7 +56,7 @@
       <td><a href="{{ url_for('admin.product_edit', product_id=p.id) }}" class="btn btn-outline btn-sm">Restock</a></td>
     </tr>
     {% endfor %}
-  </table>
+  </table></div>
 </div>
 {% endif %}
 {% endblock %}

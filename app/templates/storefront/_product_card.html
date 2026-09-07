@@ -1,4 +1,5 @@
-<a href="{{ url_for('storefront.product_detail', product_id=p.id) }}" class="card">
+<div class="card">
+  <a href="{{ url_for('storefront.product_detail', product_id=p.id) }}">
   <div class="card-img">
     {% if p.image_filename %}
       <img src="{{ url_for('static', filename='uploads/' + p.image_filename) }}" alt="{{ p.name }}">
@@ -8,6 +9,14 @@
     {% if p.flash_sale_live %}<span class="badge">Flash sale</span>
     {% elif p.has_discount %}<span class="badge brass">-{{ p.discount_percent|int }}%</span>{% endif %}
   </div>
+  </a>
+  <form method="POST" action="{{ url_for('storefront.wishlist_toggle', product_id=p.id) }}">
+    <input type="hidden" name="next" value="{{ request.path }}">
+    <button type="submit" class="wishlist-btn {% if p.id in session.get('wishlist', []) %}active{% endif %}" aria-label="Save to wishlist">
+      {% if p.id in session.get('wishlist', []) %}&#9829;{% else %}&#9825;{% endif %}
+    </button>
+  </form>
+  <a href="{{ url_for('storefront.product_detail', product_id=p.id) }}">
   <div class="card-body">
     <p class="card-name">{{ p.name }}</p>
     <div class="price-row">
@@ -19,4 +28,5 @@
       {% endif %}
     </div>
   </div>
-</a>
+  </a>
+</div>
