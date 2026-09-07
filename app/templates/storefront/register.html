@@ -3,9 +3,11 @@
 {% block content %}
 <section class="section"><div class="wrap" style="max-width:560px">
   <div class="section-head"><h2>Create your account</h2></div>
+  <p>Enter your details and we'll send a 6-digit confirmation code by SMS.</p>
   <form method="POST">
     <div class="field"><label>Full name</label><input type="text" name="name" required autocomplete="name"></div>
     <div class="field"><label>Email address</label><input type="email" name="email" required autocomplete="email" placeholder="you@gmail.com"></div>
+    <div class="field"><label>Phone number</label><input type="tel" name="phone" required autocomplete="tel" inputmode="tel" placeholder="0551234567"><small>Ghana numbers can start with 0; we'll format the number for SMS automatically.</small></div>
     <div class="field"><label>Password</label><input type="password" name="password" required minlength="8" autocomplete="new-password"><small>Use at least 8 characters.</small></div>
     <button class="btn btn-primary btn-block" type="submit">Create account</button>
   </form>
