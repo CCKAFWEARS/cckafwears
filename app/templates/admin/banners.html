@@ -1,19 +1,60 @@
 {% extends "admin/base.html" %}
 {% block title %}Banners — CCKAFWEARS Admin{% endblock %}
 {% block content %}
-<div class="topbar"><div><p class="eyebrow">Storefront content</p><h1>Banners</h1><p class="subhead">Upload promotional artwork once, then control where it appears on the storefront.</p></div></div>
+<div class="topbar"><div><p class="eyebrow">Storefront content</p><h1>Banners</h1><p class="subhead">Upload promotional artwork once, choose the exact part of the picture that should show, then control where it appears on the storefront.</p></div></div>
 <div class="admin-grid two-col banner-layout">
-<section class="card-panel"><div class="panel-head"><div><h2>Add banner</h2><p class="muted">Use a wide image for the main hero or flexible promotional sections.</p></div></div>
-<form method="POST" enctype="multipart/form-data">
+<section class="card-panel"><div class="panel-head"><div><h2>Add banner</h2><p class="muted">Choose the image focus before saving. The crop is baked into the banner image so it stays correct on every device.</p></div></div>
+<form method="POST" enctype="multipart/form-data" class="banner-crop-form" data-new-banner>
 <div class="field"><label>Banner title</label><input type="text" name="title" placeholder="New season / Flash sale" required></div>
 <div class="field"><label>Placement</label><select name="banner_type" id="bannerType" onchange="toggleCategory()"><option value="homepage">Homepage top / hero</option><option value="promotion">Flexible homepage section</option><option value="category">Category page banner</option></select></div>
 <div class="field" id="categoryField" style="display:none"><label>Category</label><select name="category_id"><option value="">Choose category</option>{% for c in categories %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select></div>
-<div class="field"><label>Image</label><input type="file" name="image" accept="image/png,image/jpeg,image/webp" required><small>Maximum 10 MB. JPG, PNG or WebP.</small></div>
+<div class="field"><label>Image</label><input type="file" name="image" accept="image/png,image/jpeg,image/webp" required data-banner-file><small>Maximum 10 MB. JPG, PNG or WebP.</small></div>
+<div class="banner-crop-editor" data-crop-editor hidden>
+  <div class="banner-crop-preview"><img data-crop-preview alt="Banner preview"></div>
+  <div class="crop-controls"><label>Horizontal focus <input type="range" min="0" max="100" value="50" data-crop-x></label><label>Vertical focus <input type="range" min="0" max="100" value="50" data-crop-y></label><small>Move the controls until the important part of the picture is inside the banner.</small></div>
+</div>
 <div class="form-grid"><div class="field"><label>Display order</label><input type="number" name="sort_order" value="0" min="0"><small>For flexible sections, lower numbers appear earlier in the homepage flow.</small></div><div class="field"><label>Link (optional)</label><input type="text" name="link_url" placeholder="/shop?category=1"></div></div>
 <button type="submit" class="btn btn-primary">Add banner</button>
 </form></section>
-<section class="card-panel"><div class="panel-head"><div><h2>Live banners</h2><p class="muted">Change placement, order, image or visibility without touching code.</p></div><span class="count-chip">{{ banners|length }}</span></div>
-{% if banners %}<div class="banner-list">{% for b in banners %}<div class="banner-item"><img src="{{ url_for('storefront.banner_media', banner_id=b.id) }}" alt="{{ b.title }}"><form method="POST" action="{{ url_for('admin.banner_edit', banner_id=b.id) }}" enctype="multipart/form-data" class="banner-edit-form"><div class="field"><label>Title</label><input type="text" name="title" value="{{ b.title }}"></div><div class="form-grid"><div class="field"><label>Placement</label><select name="banner_type"><option value="homepage" {% if b.banner_type=='homepage' %}selected{% endif %}>Homepage top / hero</option><option value="promotion" {% if b.banner_type=='promotion' %}selected{% endif %}>Flexible homepage section</option><option value="category" {% if b.banner_type=='category' %}selected{% endif %}>Category page banner</option></select></div><div class="field"><label>Display order</label><input type="number" name="sort_order" value="{{ b.sort_order }}"></div></div><div class="form-grid"><div class="field"><label>Category</label><select name="category_id"><option value="">None</option>{% for c in categories %}<option value="{{ c.id }}" {% if b.category_id==c.id %}selected{% endif %}>{{ c.name }}</option>{% endfor %}</select></div><div class="field"><label>Link</label><input type="text" name="link_url" value="{{ b.link_url or '' }}"></div></div><div class="banner-actions"><label class="switch"><input type="checkbox" name="is_active" {% if b.is_active %}checked{% endif %}><span></span> Active</label><label class="btn btn-outline btn-sm">Replace image<input type="file" name="image" accept="image/png,image/jpeg,image/webp"></label><button class="btn btn-primary btn-sm" type="submit">Save</button></div></form><form method="POST" action="{{ url_for('admin.banner_delete', banner_id=b.id) }}" onsubmit="return confirm('Delete this banner?');"><button type="submit" class="icon-danger" aria-label="Delete banner">×</button></form></div>{% endfor %}</div>{% else %}<div class="empty-admin"><strong>No banners yet.</strong><span>Add your first homepage or category banner.</span></div>{% endif %}
+<section class="card-panel"><div class="panel-head"><div><h2>Live banners</h2><p class="muted">Change placement, crop, order, image or visibility without touching code.</p></div><span class="count-chip">{{ banners|length }}</span></div>
+{% if banners %}<div class="banner-list">{% for b in banners %}<div class="banner-item"><div class="banner-current-preview"><img src="{{ url_for('storefront.banner_media', banner_id=b.id) }}" alt="{{ b.title }}" data-existing-preview></div><form method="POST" action="{{ url_for('admin.banner_edit', banner_id=b.id) }}" enctype="multipart/form-data" class="banner-edit-form banner-crop-form" data-existing-image="{{ url_for('storefront.banner_media', banner_id=b.id) }}"><div class="field"><label>Title</label><input type="text" name="title" value="{{ b.title }}"></div><div class="form-grid"><div class="field"><label>Placement</label><select name="banner_type"><option value="homepage" {% if b.banner_type=='homepage' %}selected{% endif %}>Homepage top / hero</option><option value="promotion" {% if b.banner_type=='promotion' %}selected{% endif %}>Flexible homepage section</option><option value="category" {% if b.banner_type=='category' %}selected{% endif %}>Category page banner</option></select></div><div class="field"><label>Display order</label><input type="number" name="sort_order" value="{{ b.sort_order }}"></div></div><div class="form-grid"><div class="field"><label>Category</label><select name="category_id"><option value="">None</option>{% for c in categories %}<option value="{{ c.id }}" {% if b.category_id==c.id %}selected{% endif %}>{{ c.name }}</option>{% endfor %}</select></div><div class="field"><label>Link</label><input type="text" name="link_url" value="{{ b.link_url or '' }}"></div></div><div class="field"><label>Image</label><label class="btn btn-outline btn-sm">Replace image<input type="file" name="image" accept="image/png,image/jpeg,image/webp" data-banner-file></label></div><div class="banner-crop-editor"><div class="banner-crop-preview"><img data-crop-preview src="{{ url_for('storefront.banner_media', banner_id=b.id) }}" alt="Crop preview"></div><div class="crop-controls"><label>Horizontal focus <input type="range" min="0" max="100" value="50" data-crop-x></label><label>Vertical focus <input type="range" min="0" max="100" value="50" data-crop-y></label><small>Set the part of the picture you want visible in the banner. Saving applies this crop.</small></div></div><div class="banner-actions"><label class="switch"><input type="checkbox" name="is_active" {% if b.is_active %}checked{% endif %}><span></span> Active</label><button class="btn btn-primary btn-sm" type="submit">Save</button></div></form><form method="POST" action="{{ url_for('admin.banner_delete', banner_id=b.id) }}" onsubmit="return confirm('Delete this banner?');"><button type="submit" class="icon-danger" aria-label="Delete banner">×</button></form></div>{% endfor %}</div>{% else %}<div class="empty-admin"><strong>No banners yet.</strong><span>Add your first homepage or category banner.</span></div>{% endif %}
 </section></div>
-<script>function toggleCategory(){document.getElementById('categoryField').style.display=document.getElementById('bannerType').value==='category'?'block':'none';}toggleCategory();</script>
+<script>
+function toggleCategory(){var field=document.getElementById('categoryField');var type=document.getElementById('bannerType');if(field&&type)field.style.display=type.value==='category'?'block':'none';}
+toggleCategory();
+(function(){
+  function setup(form){
+    var file=form.querySelector('[data-banner-file]'), editor=form.querySelector('[data-crop-editor]'), preview=form.querySelector('[data-crop-preview]'), x=form.querySelector('[data-crop-x]'), y=form.querySelector('[data-crop-y]');
+    var existing=form.getAttribute('data-existing-image')||'';
+    if(!editor||!preview||!x||!y)return;
+    var sourceUrl=existing;
+    function refresh(){if(preview.src)preview.style.objectPosition=x.value+'% '+y.value+'%';}
+    if(sourceUrl){editor.hidden=false;preview.src=sourceUrl;}
+    if(file){file.addEventListener('change',function(){if(!file.files||!file.files[0])return;var url=URL.createObjectURL(file.files[0]);sourceUrl=url;preview.src=url;editor.hidden=false;});}
+    [x,y].forEach(function(input){input.addEventListener('input',refresh);});
+    form.addEventListener('submit',function(event){
+      if(!sourceUrl){return;}
+      event.preventDefault();
+      var img=new Image();
+      img.onload=function(){
+        var canvas=document.createElement('canvas'),targetW=1600,targetH=700;canvas.width=targetW;canvas.height=targetH;
+        var scale=Math.max(targetW/img.naturalWidth,targetH/img.naturalHeight),drawW=img.naturalWidth*scale,drawH=img.naturalHeight*scale;
+        var maxX=Math.max(0,drawW-targetW),maxY=Math.max(0,drawH-targetH);
+        var sx=-maxX*(Number(x.value)/100),sy=-maxY*(Number(y.value)/100);
+        var ctx=canvas.getContext('2d');ctx.drawImage(img,sx,sy,drawW,drawH);
+        canvas.toBlob(function(blob){
+          if(!blob){form.submit();return;}
+          var dt=new DataTransfer();dt.items.add(new File([blob],'banner-crop.jpg',{type:'image/jpeg'}));
+          if(file)file.files=dt.files;
+          else{var hidden=document.createElement('input');hidden.type='file';hidden.name='image';hidden.style.display='none';hidden.files=dt.files;form.appendChild(hidden);}
+          form.submit();
+        },'image/jpeg',0.92);
+      };
+      img.onerror=function(){form.submit();};
+      img.src=sourceUrl;
+    });
+  }
+  document.querySelectorAll('.banner-crop-form').forEach(setup);
+})();
+</script>
 {% endblock %}
