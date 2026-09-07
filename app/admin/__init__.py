@@ -58,7 +58,6 @@ def reset_password():
         return redirect(url_for("admin.login"))
 
     if request.method == "POST":
-        username = request.form.get("username", "").strip()
         submitted_token = request.form.get("reset_token", "")
         new_password = request.form.get("new_password", "")
         confirm_password = request.form.get("confirm_password", "")
@@ -70,13 +69,14 @@ def reset_password():
         elif new_password != confirm_password:
             flash("The new passwords do not match.", "error")
         else:
-            user = AdminUser.query.filter_by(username=username).first()
+            # Reset the first admin account, so the existing username is not required.
+            user = AdminUser.query.order_by(AdminUser.id.asc()).first()
             if not user:
-                flash("Admin username not found.", "error")
+                flash("No admin account exists in the database.", "error")
             else:
                 user.password_hash = generate_password_hash(new_password)
                 db.session.commit()
-                flash("Admin password reset successfully. You can now log in.", "success")
+                flash("Admin password reset successfully. Use the existing admin username to log in.", "success")
                 return redirect(url_for("admin.login"))
 
     return render_template("admin/reset_password.html")
