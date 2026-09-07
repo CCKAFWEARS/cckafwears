@@ -1,0 +1,15 @@
+{% extends "storefront/base.html" %}
+{% block title %}Log in — CCKAFWEARS{% endblock %}
+{% block content %}
+<section class="section"><div class="wrap" style="max-width:560px">
+  <div class="section-head"><h2>Customer login</h2></div>
+  <form method="POST">
+    <input type="hidden" name="next" value="{{ request.args.get('next', '') }}">
+    <div class="field"><label>Email address</label><input type="email" name="email" required autocomplete="email"></div>
+    <div class="field"><label>Password</label><input type="password" name="password" required autocomplete="current-password"></div>
+    <button class="btn btn-primary btn-block" type="submit">Log in</button>
+  </form>
+  <p style="margin-top:16px"><a href="{{ url_for('storefront.forgot_password') }}">Forgot your password?</a></p>
+  <p>New customer? <a href="{{ url_for('storefront.register') }}">Create an account</a></p>
+</div></section>
+{% endblock %}
