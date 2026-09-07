@@ -12,7 +12,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from .. import db
 from ..models import Product, Category, Order, OrderItem, Settings, Banner, Customer
 from ..delivery import calculate_delivery
-from ..email_utils import send_verification_code, send_password_reset_code, send_order_confirmation, send_admin_order_notification
+from ..email_utils import send_password_reset_code, send_order_confirmation, send_admin_order_notification
 
 storefront_bp = Blueprint("storefront", __name__, template_folder="../templates/storefront")
 
@@ -29,11 +29,8 @@ def _customer_required(view):
     @wraps(view)
     def wrapped(*args, **kwargs):
         if not current_user.is_authenticated or not isinstance(current_user, Customer):
-            flash("Please create an account or log in before checkout.", "error")
+            flash("Please log in to continue.", "error")
             return redirect(url_for("storefront.login", next=request.path))
-        if not current_user.email_verified:
-            flash("Please confirm your phone before continuing.", "error")
-            return redirect(url_for("storefront.verify_email"))
         return view(*args, **kwargs)
     return wrapped
 
@@ -49,79 +46,21 @@ def register():
     if request.method == "POST":
         name = request.form.get("name", "").strip()
         email = request.form.get("email", "").strip().lower()
-        phone = request.form.get("phone", "").strip()
         password = request.form.get("password", "")
-        if len(name) < 2 or "@" not in email or len(phone) < 9 or len(password) < 8:
-            flash("Enter your name, a valid email address, a valid phone number and a password of at least 8 characters.", "error")
+        if len(name) < 2 or "@" not in email or len(password) < 8:
+            flash("Enter your name, a valid Gmail address and a password of at least 8 characters.", "error")
             return render_template("storefront/register.html")
         customer = Customer.query.filter_by(email=email).first()
-        if customer and customer.email_verified:
+        if customer:
             flash("An account with that email already exists. Please log in.", "error")
             return redirect(url_for("storefront.login"))
-        if customer is None:
-            customer = Customer(name=name, email=email, password_hash=generate_password_hash(password))
-            db.session.add(customer)
-        else:
-            customer.name = name
-            customer.password_hash = generate_password_hash(password)
-        code = _make_otp()
-        customer.otp_hash = generate_password_hash(code)
-        customer.otp_expires_at = datetime.utcnow() + timedelta(minutes=10)
-        customer.otp_attempts = 0
+        customer = Customer(name=name, email=email, password_hash=generate_password_hash(password))
+        db.session.add(customer)
         db.session.commit()
-        sent = send_verification_code(customer, code)
         login_user(customer)
-        flash("Your account was created. We sent a 6-digit confirmation code by SMS." if sent else "Your account was created, but SMS sending is not configured yet. Please contact the store owner.", "success" if sent else "error")
-        return redirect(url_for("storefront.verify_email"))
+        flash("Your customer account was created successfully.", "success")
+        return redirect(url_for("storefront.account"))
     return render_template("storefront/register.html")
-
-
-@storefront_bp.route("/account/verify", methods=["GET", "POST"])
-def verify_email():
-    if not current_user.is_authenticated or not isinstance(current_user, Customer):
-        return redirect(url_for("storefront.login"))
-    if current_user.email_verified:
-        return redirect(url_for("storefront.account"))
-    if request.method == "POST":
-        code = request.form.get("code", "").strip()
-        if not current_user.otp_hash or not current_user.otp_expires_at or current_user.otp_expires_at < datetime.utcnow():
-            flash("That confirmation code has expired. Please request a new one.", "error")
-            return render_template("storefront/verify_email.html")
-        if current_user.otp_attempts >= 5:
-            flash("Too many incorrect attempts. Please request a new confirmation code.", "error")
-            return render_template("storefront/verify_email.html")
-        if not check_password_hash(current_user.otp_hash, code):
-            current_user.otp_attempts += 1
-            db.session.commit()
-            flash("That code is incorrect.", "error")
-            return render_template("storefront/verify_email.html")
-        current_user.email_verified = True
-        current_user.otp_hash = None
-        current_user.otp_expires_at = None
-        current_user.otp_attempts = 0
-        db.session.commit()
-        session.pop("verification_phone", None)
-        flash("Phone confirmed. Your customer account is now active.", "success")
-        return redirect(url_for("storefront.account"))
-    return render_template("storefront/verify_email.html")
-
-
-@storefront_bp.route("/account/resend-verification", methods=["POST"])
-def resend_verification():
-    if not current_user.is_authenticated or not isinstance(current_user, Customer):
-        return redirect(url_for("storefront.login"))
-    if current_user.email_verified:
-        return redirect(url_for("storefront.account"))
-    code = _make_otp()
-    current_user.otp_hash = generate_password_hash(code)
-    current_user.otp_expires_at = datetime.utcnow() + timedelta(minutes=10)
-    current_user.otp_attempts = 0
-    db.session.commit()
-    if send_verification_code(current_user, code):
-        flash("A new SMS confirmation code has been sent.", "success")
-    else:
-        flash("The confirmation SMS could not be sent. Please check the SMS configuration.", "error")
-    return redirect(url_for("storefront.verify_email"))
 
 
 @storefront_bp.route("/account/login", methods=["GET", "POST"])
@@ -136,9 +75,6 @@ def login():
             flash("Email or password is incorrect.", "error")
             return render_template("storefront/login.html")
         login_user(customer)
-        if not customer.email_verified:
-            flash("Please confirm your phone before shopping.", "error")
-            return redirect(url_for("storefront.verify_email"))
         flash("Welcome back!", "success")
         return redirect(request.form.get("next") or url_for("storefront.account"))
     return render_template("storefront/login.html")
@@ -282,6 +218,28 @@ def wishlist_view():
     return render_template("storefront/wishlist.html", products=products)
 
 
+def _cart_line_items():
+    cart = _get_cart()
+    line_items, subtotal = [], 0.0
+    for product_id_str, qty in cart.items():
+        product = Product.query.get(int(product_id_str))
+        if not product or not product.is_active:
+            continue
+        qty = min(qty, product.stock) if product.stock else 0
+        if qty <= 0:
+            continue
+        line_total = round(product.current_price * qty, 2)
+        subtotal += line_total
+        line_items.append({"product": product, "quantity": qty, "line_total": line_total})
+    return line_items, round(subtotal, 2)
+
+
+@storefront_bp.route("/cart")
+def cart_view():
+    line_items, subtotal = _cart_line_items()
+    return render_template("storefront/cart.html", line_items=line_items, subtotal=subtotal)
+
+
 @storefront_bp.route("/cart/add/<int:product_id>", methods=["POST"])
 def cart_add(product_id):
     product = Product.query.get_or_404(product_id)
@@ -320,89 +278,3 @@ def cart_remove(product_id):
     session["cart"] = cart
     session.modified = True
     return redirect(url_for("storefront.cart_view"))
-
-
-def _cart_line_items():
-    cart = _get_cart()
-    line_items, subtotal = [], 0.0
-    for product_id_str, qty in cart.items():
-        product = Product.query.get(int(product_id_str))
-        if not product or not product.is_active:
-            continue
-        qty = min(qty, product.stock) if product.stock else 0
-        if qty <= 0:
-            continue
-        line_total = round(product.current_price * qty, 2)
-        subtotal += line_total
-        line_items.append({"product": product, "quantity": qty, "line_total": line_total})
-    return line_items, round(subtotal, 2)
-
-
-@storefront_bp.route("/cart")
-def cart_view():
-    line_items, subtotal = _cart_line_items()
-    return render_template("storefront/cart.html", line_items=line_items, subtotal=subtotal)
-
-
-@storefront_bp.route("/checkout", methods=["GET", "POST"])
-@_customer_required
-def checkout():
-    line_items, subtotal = _cart_line_items()
-    if not line_items:
-        flash("Your bag is empty.", "error")
-        return redirect(url_for("storefront.shop"))
-    settings = Settings.get()
-    if request.method == "POST":
-        phone = request.form.get("customer_phone", "").strip()
-        address = request.form.get("delivery_address", "").strip()
-        payment_method = request.form.get("payment_method", "mobile_money")
-        if not phone or not address:
-            flash("Please fill in your phone number and delivery address.", "error")
-            return render_template("storefront/checkout.html", line_items=line_items, subtotal=subtotal, settings=settings, customer=current_user)
-        delivery = calculate_delivery(address, settings.shop_lat, settings.shop_lng, settings.base_delivery_fee, settings.fee_per_km)
-        order = Order(order_code=_generate_order_code(), customer_id=current_user.id, customer_email=current_user.email, customer_name=current_user.name, customer_phone=phone, delivery_address=address, delivery_lat=delivery["lat"], delivery_lng=delivery["lng"], delivery_distance_km=delivery["distance_km"], delivery_fee=delivery["fee"], payment_method=payment_method, items_subtotal=subtotal, total_amount=round(subtotal + delivery["fee"], 2), status="pending_payment")
-        db.session.add(order)
-        db.session.flush()
-        for line in line_items:
-            product = line["product"]
-            db.session.add(OrderItem(order_id=order.id, product_id=product.id, product_name=product.name, unit_price=product.current_price, quantity=line["quantity"]))
-            product.stock = max(0, product.stock - line["quantity"])
-        db.session.commit()
-        send_order_confirmation(order)
-        send_admin_order_notification(order)
-        session["cart"] = {}
-        session.modified = True
-        flash("Order placed successfully. A confirmation has been sent to your email.", "success")
-        return redirect(url_for("storefront.order_status", order_code=order.order_code))
-    return render_template("storefront/checkout.html", line_items=line_items, subtotal=subtotal, settings=settings, customer=current_user)
-
-
-@storefront_bp.route("/order/<order_code>")
-def order_status(order_code):
-    order = Order.query.filter_by(order_code=order_code).first_or_404()
-    if current_user.is_authenticated and isinstance(current_user, Customer) and order.customer_id not in (None, current_user.id):
-        abort(403)
-    return render_template("storefront/order_status.html", order=order, settings=Settings.get())
-
-
-@storefront_bp.route("/order/<order_code>/report-payment", methods=["POST"])
-def report_payment(order_code):
-    order = Order.query.filter_by(order_code=order_code).first_or_404()
-    if current_user.is_authenticated and isinstance(current_user, Customer) and order.customer_id not in (None, current_user.id):
-        abort(403)
-    if order.status == "pending_payment":
-        order.status = "payment_review"
-        db.session.commit()
-        flash("Thanks! We'll confirm your payment shortly.", "success")
-    return redirect(url_for("storefront.order_status", order_code=order.order_code))
-
-
-@storefront_bp.route("/track", methods=["GET", "POST"])
-def track_order():
-    order = None
-    if request.method == "POST":
-        code = request.form.get("order_code", "").strip().upper()
-        order = Order.query.filter_by(order_code=code).first()
-        if not order:
-            flash("We couldn't find an order with that code.", "error")
-    return render_template("storefront/track.html", order=order)
