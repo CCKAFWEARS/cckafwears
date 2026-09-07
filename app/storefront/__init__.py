@@ -151,8 +151,9 @@ def home():
     new_arrivals = _visible_products_query().order_by(Product.created_at.desc()).limit(8).all()
     banners = Banner.query.filter_by(banner_type="homepage", is_active=True).order_by(Banner.sort_order.asc(), Banner.created_at.desc()).all()
     category_banners = Banner.query.filter_by(banner_type="promotion", is_active=True).order_by(Banner.sort_order.asc(), Banner.created_at.desc()).all()
+    tag_banners = Banner.query.filter_by(banner_type="tag", is_active=True).order_by(Banner.sort_order.asc(), Banner.created_at.desc()).all()
     categories = Category.query.order_by(Category.name).all()
-    return render_template("storefront/home.html", flash_sale_products=flash_sale_products, new_arrivals=new_arrivals, banners=banners, category_banners=category_banners, categories=categories)
+    return render_template("storefront/home.html", flash_sale_products=flash_sale_products, new_arrivals=new_arrivals, banners=banners, category_banners=category_banners, tag_banners=tag_banners, categories=categories)
 
 
 @storefront_bp.route("/shop")
