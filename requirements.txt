@@ -5,3 +5,4 @@ Werkzeug==3.0.3
 geopy==2.4.1
 gunicorn==22.0.0
 psycopg2-binary==2.9.9
+pywebpush==2.5.0
