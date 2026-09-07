@@ -1,0 +1,18 @@
+{
+  "name": "CCKAFWEARS",
+  "short_name": "CCKAFWEARS",
+  "description": "Shop CCKAFWEARS fashion online across Ghana.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ff1b6b",
+  "icons": [
+    {
+      "src": "/static/icons/cckafwears.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
