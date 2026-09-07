@@ -14,7 +14,7 @@ class Customer(UserMixin, db.Model):
     name = db.Column(db.String(120), nullable=False)
     email = db.Column(db.String(255), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(255), nullable=False)
-    email_verified = db.Column(db.Boolean, default=False, nullable=False)
+    email_verified = db.Column(db.Boolean, default=True, nullable=False)
     otp_hash = db.Column(db.String(255), nullable=True)
     otp_expires_at = db.Column(db.DateTime, nullable=True)
     otp_attempts = db.Column(db.Integer, default=0, nullable=False)
