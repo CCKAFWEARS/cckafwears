@@ -2,10 +2,11 @@ import os
 import hmac
 from datetime import datetime
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
+from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, send_file
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
+from io import BytesIO
 
 from .. import db
 from ..models import AdminUser, Product, ProductImage, Category, Order, OrderItem, Settings, Banner, ORDER_STATUSES
@@ -179,6 +180,12 @@ def product_delete(product_id):
     db.session.commit()
     flash("Product deleted.", "success")
     return redirect(url_for("admin.products"))
+
+
+@admin_bp.route("/product-gallery/<int:image_id>")
+def product_gallery_media(image_id):
+    image = ProductImage.query.get_or_404(image_id)
+    return send_file(BytesIO(image.image_data), mimetype=image.image_mime_type or "image/jpeg", max_age=31536000)
 
 
 @admin_bp.route("/categories", methods=["GET", "POST"])
