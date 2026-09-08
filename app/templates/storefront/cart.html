@@ -1,52 +1,7 @@
 {% extends "storefront/base.html" %}
-{% block title %}Your Bag \u2014 CCKAFWEARS{% endblock %}
+{% block title %}Your Bag — CCKAFWEARS{% endblock %}
 {% block content %}
-<section class="section">
-  <div class="wrap">
-    <div class="section-head"><h2>Your bag</h2></div>
-
-    {% if not line_items %}
-      <div class="empty-state">
-        <p>Your bag is empty.</p>
-        <a href="{{ url_for('storefront.shop') }}" class="btn btn-outline" style="margin-top:16px;">Continue shopping</a>
-      </div>
-    {% else %}
-      <div class="split-3-2">
-        <div>
-          {% for line in line_items %}
-          <div class="cart-row">
-            <div class="thumb-box">
-              {% if line.product.image_filename %}
-                <img src="{{ url_for('static', filename='uploads/' + line.product.image_filename) }}" alt="">
-              {% else %}
-                <div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:0.65rem;color:#c7c4bf;">CCKAFWEARS</div>
-              {% endif %}
-            </div>
-            <div style="flex:1;min-width:0;">
-              <p class="card-name">{{ line.product.name }}</p>
-              <p style="color:var(--ink-dim);font-size:0.85rem;">GHS {{ "%.2f"|format(line.product.current_price) }} each</p>
-              <form method="POST" action="{{ url_for('storefront.cart_update', product_id=line.product.id) }}" style="display:flex;align-items:center;gap:12px;margin-top:8px;flex-wrap:wrap;">
-                <input type="number" name="quantity" value="{{ line.quantity }}" min="1" max="{{ line.product.stock }}" style="width:60px;padding:6px;background:var(--surface);border:1px solid var(--line);color:var(--ink);border-radius:2px;">
-                <button type="submit" class="btn btn-outline" style="padding:7px 12px;font-size:0.78rem;">Update</button>
-              </form>
-            </div>
-            <div style="text-align:right;flex-shrink:0;">
-              <p style="font-weight:700;">GHS {{ "%.2f"|format(line.line_total) }}</p>
-              <form method="POST" action="{{ url_for('storefront.cart_remove', product_id=line.product.id) }}">
-                <button type="submit" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:0.8rem;">Remove</button>
-              </form>
-            </div>
-          </div>
-          {% endfor %}
-        </div>
-
-        <div class="payment-box">
-          <div class="row"><span>Subtotal</span><span>GHS {{ "%.2f"|format(subtotal) }}</span></div>
-          <p style="color:var(--ink-dim);font-size:0.82rem;margin-top:10px;">Delivery fee is calculated at checkout based on your address.</p>
-          <a href="{{ url_for('storefront.checkout') }}" class="btn btn-primary btn-block" style="margin-top:16px;">Proceed to checkout</a>
-        </div>
-      </div>
-    {% endif %}
-  </div>
-</section>
+<section class="section"><div class="wrap"><div class="section-head"><h2>Your bag</h2></div>
+{% if not line_items %}<div class="empty-state"><p>Your bag is empty.</p><a href="{{ url_for('storefront.shop') }}" class="btn btn-outline" style="margin-top:16px;">Continue shopping</a></div>
+{% else %}<div class="split-3-2"><div>{% for line in line_items %}<div class="cart-row"><div class="thumb-box">{% if line.product.image_filename %}<img src="{{ url_for('static', filename='uploads/' + line.product.image_filename) }}" alt="">{% else %}<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:0.65rem;color:#c7c4bf;">CCKAFWEARS</div>{% endif %}</div><div style="flex:1;min-width:0;"><p class="card-name">{{ line.product.name }}</p>{% set selected_size = session.get('cart_sizes', {}).get(line.product.id|string) %}{% if selected_size %}<p style="font-weight:700;font-size:0.85rem;margin:4px 0;">Size: {{ selected_size }}</p>{% endif %}<p style="color:var(--ink-dim);font-size:0.85rem;">GHS {{ "%.2f"|format(line.product.current_price) }} each</p><form method="POST" action="{{ url_for('storefront.cart_update', product_id=line.product.id) }}" style="display:flex;align-items:center;gap:12px;margin-top:8px;flex-wrap:wrap;"><input type="number" name="quantity" value="{{ line.quantity }}" min="1" max="{{ line.product.stock }}" style="width:60px;padding:6px;background:var(--surface);border:1px solid var(--line);color:var(--ink);border-radius:2px;"><button type="submit" class="btn btn-outline" style="padding:7px 12px;font-size:0.78rem;">Update</button></form></div><div style="text-align:right;flex-shrink:0;"><p style="font-weight:700;">GHS {{ "%.2f"|format(line.line_total) }}</p><form method="POST" action="{{ url_for('storefront.cart_remove', product_id=line.product.id) }}"><button type="submit" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:0.8rem;">Remove</button></form></div></div>{% endfor %}</div><div class="payment-box"><div class="row"><span>Subtotal</span><span>GHS {{ "%.2f"|format(subtotal) }}</span></div><p style="color:var(--ink-dim);font-size:0.82rem;margin-top:10px;">Delivery fee is calculated at checkout based on your address.</p><a href="{{ url_for('storefront.checkout') }}" class="btn btn-primary btn-block" style="margin-top:16px;">Proceed to checkout</a></div></div>{% endif %}</div></section>
 {% endblock %}
