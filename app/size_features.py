@@ -1,9 +1,10 @@
 from datetime import datetime
 from flask import request, redirect, url_for, flash, session
 from flask_login import login_required
+from sqlalchemy import event
 
 from . import db
-from .models import Product, Category, ProductImage
+from .models import Product, Category, ProductImage, OrderItem
 from .admin import admin_bp, _save_images
 from .storefront import storefront_bp
 
@@ -19,6 +20,13 @@ class ProductSize(db.Model):
     product = db.relationship("Product", backref=db.backref("size_rows", cascade="all, delete-orphan", order_by="ProductSize.sort_order"))
 
 Product.size_options = property(lambda product: [row.size for row in product.size_rows])
+
+
+@event.listens_for(OrderItem, "before_insert")
+def _add_selected_size_to_order_item(mapper, connection, target):
+    size = session.get("cart_sizes", {}).get(str(target.product_id))
+    if size and target.product_name and f"Size {size}" not in target.product_name:
+        target.product_name = f"{target.product_name} — Size {size}"
 
 
 @admin_bp.route("/products/new-with-sizes", methods=["POST"])
