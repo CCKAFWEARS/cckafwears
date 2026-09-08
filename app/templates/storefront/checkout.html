@@ -1,34 +1,7 @@
 {% extends "storefront/base.html" %}
 {% block title %}Checkout — CCKAFWEARS{% endblock %}
 {% block content %}
-<section class="section">
-  <div class="wrap">
-    <div class="section-head"><h2>Checkout</h2></div>
-    <p style="color:var(--ink-dim)">Signed in as <strong>{{ customer.email }}</strong>. Your order will be saved to your account.</p>
-
-    <div class="split-3-2">
-      <form method="POST">
-        <div class="field"><label>Full name</label><input type="text" value="{{ customer.name }}" disabled></div>
-        <div class="field"><label>Phone number</label><input type="tel" name="customer_phone" required placeholder="e.g. 0551234567"></div>
-        <div class="field"><label>Delivery address</label><textarea name="delivery_address" rows="3" required placeholder="House number, street, area, city (e.g. East Legon, Accra)"></textarea></div>
-
-        <div class="field">
-          <label>Payment method</label>
-          <label class="radio-card"><input type="radio" name="payment_method" value="mobile_money" checked><div><strong>Mobile Money</strong><p style="color:var(--ink-dim);font-size:0.85rem;margin:4px 0 0;">MTN, Vodafone or AirtelTigo</p></div></label>
-          <label class="radio-card"><input type="radio" name="payment_method" value="bank"><div><strong>Bank transfer</strong><p style="color:var(--ink-dim);font-size:0.85rem;margin:4px 0 0;">Direct transfer to our account</p></div></label>
-        </div>
-
-        <button type="submit" class="btn btn-primary btn-block">Place order</button>
-        <p style="color:var(--ink-dim);font-size:0.82rem;margin-top:10px;">Your delivery fee will be calculated automatically based on the distance to your address.</p>
-      </form>
-
-      <div class="payment-box">
-        <h3 style="margin-top:0;font-size:1.1rem;">Order summary</h3>
-        {% for line in line_items %}<div class="row"><span>{{ line.product.name }} × {{ line.quantity }}</span><span>GHS {{ "%.2f"|format(line.line_total) }}</span></div>{% endfor %}
-        <div class="summary-line"><span>Subtotal</span><span>GHS {{ "%.2f"|format(subtotal) }}</span></div>
-        <div class="summary-line"><span>Delivery</span><span>Calculated after you place order</span></div>
-      </div>
-    </div>
-  </div>
-</section>
+<section class="section"><div class="wrap"><div class="section-head"><h2>Checkout</h2></div><p style="color:var(--ink-dim)">Signed in as <strong>{{ customer.email }}</strong>. Your order will be saved to your account.</p>
+<div class="split-3-2"><form method="POST"><div class="field"><label>Full name</label><input type="text" value="{{ customer.name }}" disabled></div><div class="field"><label>Phone number</label><input type="tel" name="customer_phone" required placeholder="e.g. 0551234567"></div><div class="field"><label>Delivery address</label><textarea name="delivery_address" rows="3" required placeholder="House number, street, area, city (e.g. East Legon, Accra)"></textarea></div><div class="field"><label>Payment method</label><label class="radio-card"><input type="radio" name="payment_method" value="mobile_money" checked><div><strong>Mobile Money</strong><p style="color:var(--ink-dim);font-size:0.85rem;margin:4px 0 0;">MTN, Vodafone or AirtelTigo</p></div></label><label class="radio-card"><input type="radio" name="payment_method" value="bank"><div><strong>Bank transfer</strong><p style="color:var(--ink-dim);font-size:0.85rem;margin:4px 0 0;">Direct transfer to our account</p></div></label></div><button type="submit" class="btn btn-primary btn-block">Place order</button><p style="color:var(--ink-dim);font-size:0.82rem;margin-top:10px;">Your delivery fee will be calculated automatically based on the distance to your address.</p></form>
+<div class="payment-box"><h3 style="margin-top:0;font-size:1.1rem;">Order summary</h3>{% for line in line_items %}{% set selected_size = session.get('cart_sizes', {}).get(line.product.id|string) %}<div class="row"><span>{{ line.product.name }}{% if selected_size %} — Size {{ selected_size }}{% endif %} × {{ line.quantity }}</span><span>GHS {{ "%.2f"|format(line.line_total) }}</span></div>{% endfor %}<div class="summary-line"><span>Subtotal</span><span>GHS {{ "%.2f"|format(subtotal) }}</span></div><div class="summary-line"><span>Delivery</span><span>Calculated after you place order</span></div></div></div></div></section>
 {% endblock %}
