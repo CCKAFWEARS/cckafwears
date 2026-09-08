@@ -1,9 +1,9 @@
 from datetime import datetime
-from flask import request, redirect, url_for, flash, render_template
+from flask import request, redirect, url_for, flash, session
 from flask_login import login_required
 
 from . import db
-from .models import Product, Category
+from .models import Product, Category, ProductImage
 from .admin import admin_bp, _save_images
 from .storefront import storefront_bp
 
@@ -16,21 +16,14 @@ class ProductSize(db.Model):
     product_id = db.Column(db.Integer, db.ForeignKey("product.id", ondelete="CASCADE"), nullable=False, index=True)
     size = db.Column(db.String(20), nullable=False)
     sort_order = db.Column(db.Integer, default=0, nullable=False)
-
     product = db.relationship("Product", backref=db.backref("size_rows", cascade="all, delete-orphan", order_by="ProductSize.sort_order"))
 
-
-def _product_sizes(product):
-    return [row.size for row in product.size_rows]
-
-
-Product.size_options = property(_product_sizes)
+Product.size_options = property(lambda product: [row.size for row in product.size_rows])
 
 
 @admin_bp.route("/products/new-with-sizes", methods=["POST"])
 @login_required
 def product_new_with_sizes():
-    categories = Category.query.order_by(Category.name).all()
     selected_sizes = [s for s in request.form.getlist("sizes") if s in SIZE_OPTIONS]
     uploaded_images = _save_images(request.files.getlist("images"))
     flash_ends = request.form.get("flash_sale_ends_at")
@@ -39,7 +32,6 @@ def product_new_with_sizes():
     db.session.add(product)
     db.session.flush()
     for index, uploaded in enumerate(uploaded_images):
-        from .models import ProductImage
         db.session.add(ProductImage(product_id=product.id, image_data=uploaded[0], image_mime_type=uploaded[1], image_filename=uploaded[2], sort_order=index))
     for index, size in enumerate(selected_sizes):
         db.session.add(ProductSize(product_id=product.id, size=size, sort_order=index))
@@ -65,7 +57,6 @@ def product_edit_with_sizes(product_id):
     product.is_active = bool(request.form.get("is_active"))
     uploaded_images = _save_images(request.files.getlist("images"))
     if uploaded_images:
-        from .models import ProductImage
         primary = uploaded_images[0]
         product.image_data, product.image_mime_type, product.image_filename = primary
         next_sort = max([image.sort_order for image in product.images], default=-1) + 1
