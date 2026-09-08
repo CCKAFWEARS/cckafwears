@@ -78,6 +78,7 @@ def create_app():
     from .admin import admin_bp
     from .notifications import notifications_bp, register_notification_listeners
     from .chat import chat_bp
+    from . import size_features  # noqa: registers size model and routes before blueprints are attached
     app.register_blueprint(storefront_bp)
     app.register_blueprint(admin_bp, url_prefix="/admin")
     app.register_blueprint(notifications_bp)
