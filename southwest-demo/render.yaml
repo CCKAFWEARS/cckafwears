@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: southwest-training-demo
+    name: softwareized
     runtime: python
     rootDir: southwest-demo
     buildCommand: pip install -r requirements.txt
