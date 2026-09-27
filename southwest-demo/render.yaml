@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: southwest-training-demo
+    runtime: python
+    rootDir: southwest-demo
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: MONITOR_PASSWORD
+        sync: false
